@@ -15,7 +15,7 @@ struct FootStatus {
 
 pub struct Generator {
     style: Style,
-    rand: rand::rngs::StdRng,
+    rand: StdRng,
     feet_status: [FootStatus; 2],
     next_foot: Foot,
 }
@@ -49,14 +49,22 @@ impl Generator {
     }
 
     fn choose(&mut self) -> i8 {
-        let col_probs: Vec<(i8, f32)> = (0..(self.style.num_cols()))
-            .filter(|c| self.is_valid_col(*c))
+        let col_probs: Vec<(i8, f32)> = self
+            .valid_cols()
+            .into_iter()
             .map(|c| (c, self.prob(c)))
             .collect();
-        if col_probs.is_empty() {
-            panic!("no available panels!");
-        }
         self.random(col_probs)
+    }
+
+    fn valid_cols(&self) -> Vec<i8> {
+        let cols: Vec<i8> = (0..(self.style.num_cols()))
+            .filter(|c| self.is_valid_col(*c))
+            .collect();
+        if cols.is_empty() {
+            panic!("no available columns!");
+        }
+        cols
     }
 
     fn random(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
@@ -107,4 +115,25 @@ fn first_steps() {
     let c1 = gen.gen();
     let c2 = gen.gen();
     assert!((c1 == 0 && c2 == 3) || (c1 == 3 && c2 == 0));
+}
+
+#[test]
+fn valid_steps() {
+    let gen = Generator {
+        style: Style::ItgSingles,
+        rand: StdRng::from_entropy(),
+        feet_status: [
+            FootStatus {
+                last_col: Some(0),
+                repeated: 0,
+            },
+            FootStatus {
+                last_col: Some(3),
+                repeated: 0,
+            },
+        ],
+        next_foot: Foot::Left,
+    };
+    let valid_cols = gen.valid_cols();
+    assert_eq!(valid_cols, vec![0, 1, 2, 3]);
 }
