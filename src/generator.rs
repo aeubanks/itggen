@@ -42,10 +42,33 @@ impl Generator {
         if self.feet_status[self.next_foot as usize].last_col.is_none() {
             col = self.style.init_col(self.next_foot);
         } else {
-            col = 0
+            col = self.choose();
         }
         self.step(col);
         col
+    }
+
+    fn choose(&mut self) -> i8 {
+        let col_probs: Vec<(i8, f32)> = (0..(self.style.num_cols()))
+            .filter(|c| self.is_valid_col(*c))
+            .map(|c| (c, self.prob(c)))
+            .collect();
+        if col_probs.is_empty() {
+            panic!("no available panels!");
+        }
+        self.random(col_probs)
+    }
+
+    fn random(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
+        let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
+        let mut prob_remaining = self.rand.gen_range(0., total_prob);
+        for (c, p) in &col_probs {
+            prob_remaining -= p;
+            if prob_remaining <= 0. {
+                return *c;
+            }
+        }
+        col_probs.last().unwrap().0
     }
 
     fn step(&mut self, col: i8) {
@@ -57,6 +80,16 @@ impl Generator {
         self.feet_status[self.next_foot as usize].last_col = Some(col);
 
         self.next_foot = self.next_foot.other();
+    }
+}
+
+impl Generator {
+    fn is_valid_col(&self, col: i8) -> bool {
+        true
+    }
+
+    fn prob(&self, col: i8) -> f32 {
+        1.
     }
 }
 
