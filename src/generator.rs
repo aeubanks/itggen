@@ -94,6 +94,14 @@ impl Generator {
 }
 
 #[test]
+fn sanity() {
+    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+    for _ in 0..100 {
+        let _ = gen.gen();
+    }
+}
+
+#[test]
 fn first_steps() {
     let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
     let c1 = gen.gen();
