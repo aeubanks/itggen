@@ -2,6 +2,11 @@ use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
 
+#[derive(Copy, Clone, Default)]
+pub struct GeneratorParameters {
+    seed: Option<u64>,
+}
+
 #[derive(Default, Copy, Clone)]
 struct FootStatus {
     pub last_col: Option<i8>,
@@ -16,17 +21,11 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(style: Style) -> Self {
-        let rand = rand::rngs::StdRng::from_entropy();
-        Self::new_impl(style, rand)
-    }
-
-    pub fn with_seed(style: Style, seed: u64) -> Self {
-        let rand = rand::rngs::StdRng::seed_from_u64(seed);
-        Self::new_impl(style, rand)
-    }
-
-    fn new_impl(style: Style, mut rand: StdRng) -> Self {
+    pub fn new(style: Style, params: GeneratorParameters) -> Self {
+        let mut rand = params
+            .seed
+            .map(|s| StdRng::seed_from_u64(s))
+            .unwrap_or_else(|| StdRng::from_entropy());
         let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
         Self {
             style,
@@ -63,7 +62,7 @@ impl Generator {
 
 #[test]
 fn first_steps() {
-    let mut gen = Generator::new(Style::ItgSingles);
+    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
     let c1 = gen.gen();
     let c2 = gen.gen();
     assert!((c1 == 0 && c2 == 3) || (c1 == 3 && c2 == 0));
