@@ -1,7 +1,12 @@
 mod coord;
-mod panel;
+mod foot;
+mod generator;
 mod style;
 
+use generator::Generator;
+use style::Style;
+
 fn main() {
-    println!("Hello, world!");
+    let mut gen = Generator::new(Style::ItgDoubles);
+    let _ = gen.gen();
 }
