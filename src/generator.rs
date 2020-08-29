@@ -2,9 +2,19 @@ use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 pub struct GeneratorParameters {
     seed: Option<u64>,
+    allow_footswitch: bool,
+}
+
+impl Default for GeneratorParameters {
+    fn default() -> Self {
+        Self {
+            seed: None,
+            allow_footswitch: false,
+        }
+    }
 }
 
 #[derive(Default, Copy, Clone)]
@@ -15,6 +25,7 @@ struct FootStatus {
 
 pub struct Generator {
     style: Style,
+    params: GeneratorParameters,
     rand: StdRng,
     feet_status: [FootStatus; 2],
     next_foot: Foot,
@@ -29,6 +40,7 @@ impl Generator {
         let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
         Self {
             style,
+            params,
             rand,
             feet_status: [FootStatus::default(); 2],
             next_foot,
@@ -37,6 +49,7 @@ impl Generator {
 }
 
 impl Generator {
+    #[must_use]
     pub fn gen(&mut self) -> i8 {
         let col;
         if self.feet_status[self.next_foot as usize].last_col.is_none() {
@@ -80,19 +93,40 @@ impl Generator {
     }
 
     fn step(&mut self, col: i8) {
-        if self.feet_status[self.next_foot as usize].last_col == Some(col) {
-            self.feet_status[self.next_foot as usize].repeated += 1;
+        if self.next_foot_status().last_col == Some(col) {
+            self.next_foot_status_mut().repeated += 1;
         } else {
-            self.feet_status[self.next_foot as usize].repeated = 0;
+            self.next_foot_status_mut().repeated = 0;
         }
-        self.feet_status[self.next_foot as usize].last_col = Some(col);
+        self.next_foot_status_mut().last_col = Some(col);
 
         self.next_foot = self.next_foot.other();
     }
 }
 
 impl Generator {
+    fn next_foot_status(&self) -> &FootStatus {
+        &self.feet_status[self.next_foot as usize]
+    }
+
+    fn prev_foot_status(&self) -> &FootStatus {
+        &self.feet_status[self.next_foot.other() as usize]
+    }
+
+    fn next_foot_status_mut(&mut self) -> &mut FootStatus {
+        &mut self.feet_status[self.next_foot as usize]
+    }
+
+    fn prev_foot_status_mut(&mut self) -> &mut FootStatus {
+        &mut self.feet_status[self.next_foot.other() as usize]
+    }
+
     fn is_valid_col(&self, col: i8) -> bool {
+        if !self.params.allow_footswitch {
+            if self.prev_foot_status().last_col == Some(col) {
+                return false;
+            }
+        }
         true
     }
 
@@ -119,21 +153,51 @@ fn first_steps() {
 
 #[test]
 fn valid_steps() {
-    let gen = Generator {
-        style: Style::ItgSingles,
-        rand: StdRng::from_entropy(),
-        feet_status: [
-            FootStatus {
-                last_col: Some(0),
-                repeated: 0,
+    {
+        let gen = Generator {
+            style: Style::ItgSingles,
+            params: GeneratorParameters {
+                seed: None,
+                allow_footswitch: true,
             },
-            FootStatus {
-                last_col: Some(3),
-                repeated: 0,
+            rand: StdRng::from_entropy(),
+            feet_status: [
+                FootStatus {
+                    last_col: Some(0),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+            ],
+            next_foot: Foot::Left,
+        };
+        let valid_cols = gen.valid_cols();
+        assert_eq!(valid_cols, vec![0, 1, 2, 3]);
+    }
+    // no footswitches
+    {
+        let gen = Generator {
+            style: Style::ItgSingles,
+            params: GeneratorParameters {
+                seed: None,
+                allow_footswitch: false,
             },
-        ],
-        next_foot: Foot::Left,
-    };
-    let valid_cols = gen.valid_cols();
-    assert_eq!(valid_cols, vec![0, 1, 2, 3]);
+            rand: StdRng::from_entropy(),
+            feet_status: [
+                FootStatus {
+                    last_col: Some(0),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+            ],
+            next_foot: Foot::Left,
+        };
+        let valid_cols = gen.valid_cols();
+        assert_eq!(valid_cols, vec![0, 1, 2]);
+    }
 }
