@@ -9,6 +9,7 @@ pub struct GeneratorParameters {
     max_repeated: Option<i32>,
     repeated_decay: Option<(i32, f32)>,
     max_dist_between_feet: Option<f32>,
+    dist_between_feet_decay: Option<(f32, f32)>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -142,11 +143,21 @@ impl Generator {
 
     fn prob(&self, col: i8) -> f32 {
         let mut prob = 1.;
-        if let Some((r, d)) = self.params.repeated_decay {
+        if let Some((repeated, decay)) = self.params.repeated_decay {
             if self.next_foot_status().last_col == Some(col) {
-                let over_repeated = self.next_foot_status().repeated - r;
+                let over_repeated = self.next_foot_status().repeated - repeated;
                 if over_repeated > 0 {
-                    prob *= d.powi(over_repeated);
+                    prob *= decay.powi(over_repeated);
+                }
+            }
+        }
+        if let Some((dist, decay)) = self.params.dist_between_feet_decay {
+            if let Some(prev_col) = self.prev_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                let over_dist = prev_coord.dist(&cur_coord) - dist;
+                if over_dist > 0. {
+                    prob *= decay.powf(over_dist);
                 }
             }
         }
@@ -334,5 +345,29 @@ fn steps_prob() {
         assert_eq!(gen.prob(0), 0.25);
         gen.step(0);
         assert_eq!(gen.prob(3), 0.25);
+    }
+    {
+        let mut params = GeneratorParameters::default();
+        params.dist_between_feet_decay = Some((1., 0.5));
+        let gen = Generator {
+            style: Style::ItgDoubles,
+            params,
+            rand: StdRng::from_entropy(),
+            feet_status: [
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(4),
+                    repeated: 0,
+                },
+            ],
+            next_foot: Foot::Right,
+        };
+        assert_eq!(gen.prob(0), 0.5);
+        assert_eq!(gen.prob(3), 1.);
+        assert_eq!(gen.prob(4), 1.);
+        assert_eq!(gen.prob(7), 0.25);
     }
 }
