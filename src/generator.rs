@@ -2,22 +2,14 @@ use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct GeneratorParameters {
     seed: Option<u64>,
-    allow_footswitch: bool,
+    disallow_footswitch: bool,
+    max_repeated: Option<i32>,
 }
 
-impl Default for GeneratorParameters {
-    fn default() -> Self {
-        Self {
-            seed: None,
-            allow_footswitch: false,
-        }
-    }
-}
-
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 struct FootStatus {
     pub last_col: Option<i8>,
     pub repeated: i32,
@@ -122,8 +114,15 @@ impl Generator {
     }
 
     fn is_valid_col(&self, col: i8) -> bool {
-        if !self.params.allow_footswitch {
+        if self.params.disallow_footswitch {
             if self.prev_foot_status().last_col == Some(col) {
+                return false;
+            }
+        }
+        if let Some(mr) = self.params.max_repeated {
+            if self.next_foot_status().last_col == Some(col)
+                && self.next_foot_status().repeated >= mr
+            {
                 return false;
             }
         }
@@ -154,12 +153,10 @@ fn first_steps() {
 #[test]
 fn valid_steps() {
     {
+        let params = GeneratorParameters::default();
         let gen = Generator {
             style: Style::ItgSingles,
-            params: GeneratorParameters {
-                seed: None,
-                allow_footswitch: true,
-            },
+            params,
             rand: StdRng::from_entropy(),
             feet_status: [
                 FootStatus {
@@ -173,17 +170,15 @@ fn valid_steps() {
             ],
             next_foot: Foot::Left,
         };
-        let valid_cols = gen.valid_cols();
-        assert_eq!(valid_cols, vec![0, 1, 2, 3]);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
     }
     // no footswitches
     {
+        let mut params = GeneratorParameters::default();
+        params.disallow_footswitch = true;
         let gen = Generator {
             style: Style::ItgSingles,
-            params: GeneratorParameters {
-                seed: None,
-                allow_footswitch: false,
-            },
+            params,
             rand: StdRng::from_entropy(),
             feet_status: [
                 FootStatus {
@@ -197,7 +192,36 @@ fn valid_steps() {
             ],
             next_foot: Foot::Left,
         };
-        let valid_cols = gen.valid_cols();
-        assert_eq!(valid_cols, vec![0, 1, 2]);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
+    }
+    // max repeated
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_repeated = Some(2);
+        let mut gen = Generator {
+            style: Style::ItgSingles,
+            params,
+            rand: StdRng::from_entropy(),
+            feet_status: [
+                FootStatus {
+                    last_col: Some(0),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+            ],
+            next_foot: Foot::Left,
+        };
+        gen.step(0);
+        gen.step(3);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
+        gen.step(0);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
+        gen.step(3);
+        assert_eq!(gen.valid_cols(), vec![1, 2, 3]);
+        gen.step(0);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
     }
 }
