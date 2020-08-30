@@ -14,6 +14,7 @@ pub struct GeneratorParameters {
     dist_between_steps_decay: Option<(f32, f32)>,
     max_angle: Option<f32>,
     angle_decay: Option<(f32, f32)>,
+    max_turn: Option<f32>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -191,6 +192,13 @@ impl Generator {
         if let Some(ma) = self.params.max_angle {
             if let Some(a) = self.test_angle(col) {
                 if a.abs() > ma + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
+        if let Some(mt) = self.params.max_turn {
+            if let Some(a) = self.test_angle(col) {
+                if (a - self.prev_angle).abs() > mt + Self::EPSILON {
                     return false;
                 }
             }
@@ -422,6 +430,24 @@ fn valid_steps() {
             repeated: 0,
         }; 2];
         assert_eq!(gen.valid_cols(), vec![3, 5, 6, 7, 8]);
+    }
+    // max turn
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_turn = Some(PI / 2.);
+        let mut gen = Generator::new_with_state(
+            Style::HorizonSingles,
+            params,
+            [FootStatus::default(); 2],
+            Foot::Left,
+        );
+        gen.step(3);
+        gen.step(4);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
+
+        gen.step(5);
+        gen.step(4);
+        assert_eq!(gen.valid_cols(), vec![1, 2, 4, 5, 6, 7]);
     }
 }
 
