@@ -364,10 +364,8 @@ fn valid_steps() {
         gen.step(1);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 5]);
         gen.next_foot = Foot::Right;
-        gen.feet_status = [FootStatus {
-            last_col: Some(7),
-            repeated: 0,
-        }; 2];
+        gen.step(7);
+        gen.step(7);
         assert_eq!(gen.valid_cols(), vec![3, 5, 6, 7, 8]);
     }
     // max turn
