@@ -1,7 +1,7 @@
 use crate::coord::Coord;
 use crate::foot::Foot;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Style {
     ItgSingles,
     ItgDoubles,
