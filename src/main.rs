@@ -24,4 +24,5 @@ fn main() {
 
     let mut gen = Generator::new(Style::ItgDoubles, GeneratorParameters::default());
     let _ = gen.gen();
+    let _ = gen.gen_with_input_col(0);
 }

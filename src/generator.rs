@@ -121,6 +121,7 @@ impl Generator {
         col_probs.last().unwrap().0
     }
 
+    #[cfg(test)]
     fn step(&mut self, col: i8) {
         self.step_impl(col, None, true)
     }
