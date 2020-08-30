@@ -48,19 +48,6 @@ impl Generator {
             prev_angle: 0.,
         }
     }
-
-    #[cfg(test)]
-    fn new_with_state(
-        style: Style,
-        params: GeneratorParameters,
-        feet_status: [FootStatus; 2],
-        next_foot: Foot,
-    ) -> Self {
-        let mut ret = Self::new(style, params);
-        ret.feet_status = feet_status;
-        ret.next_foot = next_foot;
-        ret
-    }
 }
 
 impl Generator {
@@ -274,10 +261,18 @@ fn sanity() {
 
 #[test]
 fn first_steps() {
-    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
-    let c1 = gen.gen();
-    let c2 = gen.gen();
-    assert!((c1 == 0 && c2 == 3) || (c1 == 3 && c2 == 0));
+    {
+        let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+        gen.next_foot = Foot::Left;
+        assert_eq!(gen.gen(), 0);
+        assert_eq!(gen.gen(), 3);
+    }
+    {
+        let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+        gen.next_foot = Foot::Right;
+        assert_eq!(gen.gen(), 3);
+        assert_eq!(gen.gen(), 0);
+    }
 }
 
 #[test]
@@ -293,21 +288,7 @@ fn valid_steps() {
             Style::HorizonDoubles,
         ] {
             let params = GeneratorParameters::default();
-            let gen = Generator::new_with_state(
-                *style,
-                params,
-                [
-                    FootStatus {
-                        last_col: Some(0),
-                        repeated: 0,
-                    },
-                    FootStatus {
-                        last_col: Some(3),
-                        repeated: 0,
-                    },
-                ],
-                Foot::Left,
-            );
+            let gen = Generator::new(*style, params);
             assert_eq!(
                 gen.valid_cols(),
                 (0..(style.num_cols())).collect::<Vec<i8>>()
@@ -318,42 +299,18 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.disallow_footswitch = true;
-        let gen = Generator::new_with_state(
-            Style::ItgSingles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(0),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(3),
-                    repeated: 0,
-                },
-            ],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::ItgSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(0);
+        gen.step(3);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
     }
     // max repeated
     {
         let mut params = GeneratorParameters::default();
         params.max_repeated = Some(2);
-        let mut gen = Generator::new_with_state(
-            Style::ItgSingles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(1),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(2),
-                    repeated: 0,
-                },
-            ],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::ItgSingles, params);
+        gen.next_foot = Foot::Left;
         gen.step(0);
         gen.step(3);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
@@ -368,21 +325,10 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_feet = Some(2.);
-        let mut gen = Generator::new_with_state(
-            Style::ItgDoubles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(0),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(3),
-                    repeated: 0,
-                },
-            ],
-            Foot::Right,
-        );
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Right;
+        gen.step(3);
+        gen.step(0);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
         gen.step(7);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
@@ -391,21 +337,10 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_steps = Some(2.);
-        let mut gen = Generator::new_with_state(
-            Style::ItgDoubles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(0),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(7),
-                    repeated: 0,
-                },
-            ],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(0);
+        gen.step(7);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
@@ -414,15 +349,10 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.max_angle = Some(PI * 3. / 4.);
-        let mut gen = Generator::new_with_state(
-            Style::HorizonSingles,
-            params,
-            [FootStatus {
-                last_col: Some(1),
-                repeated: 0,
-            }; 2],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(1);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 5]);
         gen.next_foot = Foot::Right;
         gen.feet_status = [FootStatus {
@@ -435,12 +365,8 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.max_turn = Some(PI / 2.);
-        let mut gen = Generator::new_with_state(
-            Style::HorizonSingles,
-            params,
-            [FootStatus::default(); 2],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
         gen.step(3);
         gen.step(4);
         assert_eq!(gen.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
@@ -459,21 +385,8 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.repeated_decay = Some((2, 0.5));
-        let mut gen = Generator::new_with_state(
-            Style::ItgSingles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(1),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(2),
-                    repeated: 0,
-                },
-            ],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::ItgSingles, params);
+        gen.next_foot = Foot::Left;
         gen.step(0);
         gen.step(3);
         gen.step(0);
@@ -494,21 +407,10 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_feet_decay = Some((1., 0.5));
-        let gen = Generator::new_with_state(
-            Style::ItgDoubles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(3),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(4),
-                    repeated: 0,
-                },
-            ],
-            Foot::Right,
-        );
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Right;
+        gen.step(4);
+        gen.step(3);
         assert_eq!(gen.prob(0), 0.5);
         assert_eq!(gen.prob(3), 1.);
         assert_eq!(gen.prob(4), 1.);
@@ -518,21 +420,10 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_steps_decay = Some((1., 0.5));
-        let gen = Generator::new_with_state(
-            Style::ItgDoubles,
-            params,
-            [
-                FootStatus {
-                    last_col: Some(3),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(5),
-                    repeated: 0,
-                },
-            ],
-            Foot::Left,
-        );
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(3);
+        gen.step(5);
         assert_eq!(gen.prob(0), 0.5);
         assert_eq!(gen.prob(3), 1.);
         assert_eq!(gen.prob(4), 1.);
@@ -540,35 +431,28 @@ fn steps_prob() {
     }
     // angle decay
     {
-        let mut params = GeneratorParameters::default();
-        params.angle_decay = Some((PI / 2., 0.5));
-        let mut gen = Generator::new_with_state(
-            Style::HorizonSingles,
-            params,
-            [FootStatus {
-                last_col: Some(1),
-                repeated: 0,
-            }; 2],
-            Foot::Left,
-        );
-        assert_relative_eq!(gen.prob(0), 1.);
-        assert_relative_eq!(gen.prob(1), 1.);
-        assert_relative_eq!(gen.prob(2), 1.);
-        assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-        assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-        assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.));
-
-        gen.next_foot = Foot::Right;
-        gen.feet_status = [FootStatus {
-            last_col: Some(7),
-            repeated: 0,
-        }; 2];
-        assert_relative_eq!(gen.prob(6), 1.);
-        assert_relative_eq!(gen.prob(7), 1.);
-        assert_relative_eq!(gen.prob(8), 1.);
-        assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-        assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-        assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+        {
+            let mut params = GeneratorParameters::default();
+            params.angle_decay = Some((PI / 2., 0.5));
+            let mut gen = Generator::new(Style::HorizonSingles, params);
+            gen.next_foot = Foot::Left;
+            gen.step(1);
+            gen.step(1);
+        }
+        {
+            let mut params = GeneratorParameters::default();
+            params.angle_decay = Some((PI / 2., 0.5));
+            let mut gen = Generator::new(Style::HorizonSingles, params);
+            gen.next_foot = Foot::Right;
+            gen.step(7);
+            gen.step(7);
+            assert_relative_eq!(gen.prob(6), 1.);
+            assert_relative_eq!(gen.prob(7), 1.);
+            assert_relative_eq!(gen.prob(8), 1.);
+            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+        }
     }
 }
 
