@@ -7,6 +7,7 @@ pub struct GeneratorParameters {
     seed: Option<u64>,
     disallow_footswitch: bool,
     max_repeated: Option<i32>,
+    repeated_decay: Option<(i32, f32)>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -134,7 +135,16 @@ impl Generator {
     }
 
     fn prob(&self, col: i8) -> f32 {
-        1.
+        let mut prob = 1.;
+        if let Some((r, d)) = self.params.repeated_decay {
+            if self.next_foot_status().last_col == Some(col) {
+                let over_repeated = self.next_foot_status().repeated - r;
+                if over_repeated > 0 {
+                    prob *= d.powi(over_repeated);
+                }
+            }
+        }
+        prob
     }
 }
 
@@ -243,5 +253,44 @@ fn valid_steps() {
         assert_eq!(gen.valid_cols(), vec![1, 2, 3]);
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
+    }
+}
+
+#[test]
+fn steps_prob() {
+    {
+        let mut params = GeneratorParameters::default();
+        params.repeated_decay = Some((2, 0.5));
+        let mut gen = Generator {
+            style: Style::ItgSingles,
+            params,
+            rand: StdRng::from_entropy(),
+            feet_status: [
+                FootStatus {
+                    last_col: Some(0),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+            ],
+            next_foot: Foot::Left,
+        };
+        gen.step(0);
+        gen.step(3);
+        gen.step(0);
+        gen.step(3);
+        assert_eq!(gen.prob(0), 1.);
+        gen.step(0);
+        assert_eq!(gen.prob(3), 1.);
+        gen.step(3);
+        assert_eq!(gen.prob(0), 0.5);
+        gen.step(0);
+        assert_eq!(gen.prob(3), 0.5);
+        gen.step(3);
+        assert_eq!(gen.prob(0), 0.25);
+        gen.step(0);
+        assert_eq!(gen.prob(3), 0.25);
     }
 }
