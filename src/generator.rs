@@ -183,24 +183,36 @@ fn first_steps() {
 #[test]
 fn valid_steps() {
     {
-        let params = GeneratorParameters::default();
-        let gen = Generator {
-            style: Style::ItgSingles,
-            params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
-                FootStatus {
-                    last_col: Some(0),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(3),
-                    repeated: 0,
-                },
-            ],
-            next_foot: Foot::Left,
-        };
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
+        for style in &[
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            Style::PumpSingles,
+            Style::PumpDoubles,
+            Style::HorizonSingles,
+            Style::HorizonDoubles,
+        ] {
+            let params = GeneratorParameters::default();
+            let gen = Generator {
+                style: *style,
+                params,
+                rand: StdRng::from_entropy(),
+                feet_status: [
+                    FootStatus {
+                        last_col: Some(0),
+                        repeated: 0,
+                    },
+                    FootStatus {
+                        last_col: Some(3),
+                        repeated: 0,
+                    },
+                ],
+                next_foot: Foot::Left,
+            };
+            assert_eq!(
+                gen.valid_cols(),
+                (0..(style.num_cols())).collect::<Vec<i8>>()
+            );
+        }
     }
     // no footswitches
     {
