@@ -54,7 +54,7 @@ impl Generator {
 impl Generator {
     pub fn gen(&mut self) -> i8 {
         let col;
-        if self.feet_status[self.next_foot as usize].last_col.is_none() {
+        if self.next_foot_status().last_col.is_none() {
             col = self.style.init_col(self.next_foot);
         } else {
             col = self.choose();
