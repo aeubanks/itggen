@@ -469,18 +469,21 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_steps_decay = Some((1., 0.5));
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.feet_status = [
-            FootStatus {
-                last_col: Some(3),
-                repeated: 0,
-            },
-            FootStatus {
-                last_col: Some(5),
-                repeated: 0,
-            },
-        ];
-        gen.next_foot = Foot::Left;
+        let gen = Generator::new_with_state(
+            Style::ItgDoubles,
+            params,
+            [
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(5),
+                    repeated: 0,
+                },
+            ],
+            Foot::Left,
+        );
         assert_eq!(gen.prob(0), 0.5);
         assert_eq!(gen.prob(3), 1.);
         assert_eq!(gen.prob(4), 1.);
