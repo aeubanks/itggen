@@ -12,6 +12,7 @@ pub struct GeneratorParameters {
     dist_between_feet_decay: Option<(f32, f32)>,
     max_dist_between_steps: Option<f32>,
     dist_between_steps_decay: Option<(f32, f32)>,
+    max_angle: Option<f32>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -26,6 +27,7 @@ pub struct Generator {
     rand: StdRng,
     feet_status: [FootStatus; 2],
     next_foot: Foot,
+    prev_angle: f32,
 }
 
 impl Generator {
@@ -41,7 +43,21 @@ impl Generator {
             rand,
             feet_status: [FootStatus::default(); 2],
             next_foot,
+            prev_angle: 0.,
         }
+    }
+
+    #[cfg(test)]
+    fn new_with_state(
+        style: Style,
+        params: GeneratorParameters,
+        feet_status: [FootStatus; 2],
+        next_foot: Foot,
+    ) -> Self {
+        let mut ret = Self::new(style, params);
+        ret.feet_status = feet_status;
+        ret.next_foot = next_foot;
+        ret
     }
 }
 
@@ -106,6 +122,7 @@ impl Generator {
 }
 
 impl Generator {
+    const EPSILON: f32 = 0.00001;
     fn next_foot_status(&self) -> &FootStatus {
         &self.feet_status[self.next_foot as usize]
     }
@@ -116,6 +133,16 @@ impl Generator {
 
     fn next_foot_status_mut(&mut self) -> &mut FootStatus {
         &mut self.feet_status[self.next_foot as usize]
+    }
+
+    fn test_angle(&self, col: i8) -> Option<f32> {
+        let (lc, rc) = match self.next_foot {
+            Foot::Left => (col, self.feet_status[Foot::Right as usize].last_col?),
+            Foot::Right => (self.feet_status[Foot::Left as usize].last_col?, col),
+        };
+        let l = self.style.coord(lc);
+        let r = self.style.coord(rc);
+        Some(l.angle(&r, self.prev_angle))
     }
 
     fn is_valid_col(&self, col: i8) -> bool {
@@ -135,7 +162,7 @@ impl Generator {
             if let Some(prev_col) = self.prev_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                if prev_coord.dist(&cur_coord) + std::f32::EPSILON > md {
+                if prev_coord.dist(&cur_coord) > md + Self::EPSILON {
                     return false;
                 }
             }
@@ -144,7 +171,14 @@ impl Generator {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                if prev_coord.dist(&cur_coord) + std::f32::EPSILON > md {
+                if prev_coord.dist(&cur_coord) > md + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
+        if let Some(ma) = self.params.max_angle {
+            if let Some(a) = self.test_angle(col) {
+                if a.abs() > ma + Self::EPSILON {
                     return false;
                 }
             }
@@ -220,6 +254,7 @@ fn first_steps() {
 
 #[test]
 fn valid_steps() {
+    use std::f32::consts::PI;
     {
         for style in &[
             Style::ItgSingles,
@@ -230,11 +265,10 @@ fn valid_steps() {
             Style::HorizonDoubles,
         ] {
             let params = GeneratorParameters::default();
-            let gen = Generator {
-                style: *style,
+            let gen = Generator::new_with_state(
+                *style,
                 params,
-                rand: StdRng::from_entropy(),
-                feet_status: [
+                [
                     FootStatus {
                         last_col: Some(0),
                         repeated: 0,
@@ -244,8 +278,8 @@ fn valid_steps() {
                         repeated: 0,
                     },
                 ],
-                next_foot: Foot::Left,
-            };
+                Foot::Left,
+            );
             assert_eq!(
                 gen.valid_cols(),
                 (0..(style.num_cols())).collect::<Vec<i8>>()
@@ -256,11 +290,10 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.disallow_footswitch = true;
-        let gen = Generator {
-            style: Style::ItgSingles,
+        let gen = Generator::new_with_state(
+            Style::ItgSingles,
             params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
+            [
                 FootStatus {
                     last_col: Some(0),
                     repeated: 0,
@@ -270,19 +303,18 @@ fn valid_steps() {
                     repeated: 0,
                 },
             ],
-            next_foot: Foot::Left,
-        };
+            Foot::Left,
+        );
         assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
     }
     // max repeated
     {
         let mut params = GeneratorParameters::default();
         params.max_repeated = Some(2);
-        let mut gen = Generator {
-            style: Style::ItgSingles,
+        let mut gen = Generator::new_with_state(
+            Style::ItgSingles,
             params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
+            [
                 FootStatus {
                     last_col: Some(1),
                     repeated: 0,
@@ -292,8 +324,8 @@ fn valid_steps() {
                     repeated: 0,
                 },
             ],
-            next_foot: Foot::Left,
-        };
+            Foot::Left,
+        );
         gen.step(0);
         gen.step(3);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
@@ -308,11 +340,10 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_feet = Some(2.);
-        let mut gen = Generator {
-            style: Style::ItgDoubles,
+        let mut gen = Generator::new_with_state(
+            Style::ItgDoubles,
             params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
+            [
                 FootStatus {
                     last_col: Some(0),
                     repeated: 0,
@@ -322,8 +353,8 @@ fn valid_steps() {
                     repeated: 0,
                 },
             ],
-            next_foot: Foot::Right,
-        };
+            Foot::Right,
+        );
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
         gen.step(7);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
@@ -332,11 +363,10 @@ fn valid_steps() {
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_steps = Some(2.);
-        let mut gen = Generator {
-            style: Style::ItgDoubles,
+        let mut gen = Generator::new_with_state(
+            Style::ItgDoubles,
             params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
+            [
                 FootStatus {
                     last_col: Some(0),
                     repeated: 0,
@@ -346,11 +376,32 @@ fn valid_steps() {
                     repeated: 0,
                 },
             ],
-            next_foot: Foot::Left,
-        };
+            Foot::Left,
+        );
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
+    }
+    // max angle
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_angle = Some(PI * 3. / 4.);
+        let mut gen = Generator::new_with_state(
+            Style::HorizonSingles,
+            params,
+            [FootStatus {
+                last_col: Some(1),
+                repeated: 0,
+            }; 2],
+            Foot::Left,
+        );
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 5]);
+        gen.next_foot = Foot::Right;
+        gen.feet_status = [FootStatus {
+            last_col: Some(7),
+            repeated: 0,
+        }; 2];
+        assert_eq!(gen.valid_cols(), vec![3, 5, 6, 7, 8]);
     }
 }
 
@@ -360,11 +411,10 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.repeated_decay = Some((2, 0.5));
-        let mut gen = Generator {
-            style: Style::ItgSingles,
+        let mut gen = Generator::new_with_state(
+            Style::ItgSingles,
             params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
+            [
                 FootStatus {
                     last_col: Some(1),
                     repeated: 0,
@@ -374,8 +424,8 @@ fn steps_prob() {
                     repeated: 0,
                 },
             ],
-            next_foot: Foot::Left,
-        };
+            Foot::Left,
+        );
         gen.step(0);
         gen.step(3);
         gen.step(0);
@@ -396,11 +446,10 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_feet_decay = Some((1., 0.5));
-        let gen = Generator {
-            style: Style::ItgDoubles,
+        let gen = Generator::new_with_state(
+            Style::ItgDoubles,
             params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
+            [
                 FootStatus {
                     last_col: Some(3),
                     repeated: 0,
@@ -410,8 +459,8 @@ fn steps_prob() {
                     repeated: 0,
                 },
             ],
-            next_foot: Foot::Right,
-        };
+            Foot::Right,
+        );
         assert_eq!(gen.prob(0), 0.5);
         assert_eq!(gen.prob(3), 1.);
         assert_eq!(gen.prob(4), 1.);
@@ -421,22 +470,18 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_steps_decay = Some((1., 0.5));
-        let gen = Generator {
-            style: Style::ItgDoubles,
-            params,
-            rand: StdRng::from_entropy(),
-            feet_status: [
-                FootStatus {
-                    last_col: Some(3),
-                    repeated: 0,
-                },
-                FootStatus {
-                    last_col: Some(5),
-                    repeated: 0,
-                },
-            ],
-            next_foot: Foot::Left,
-        };
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.feet_status = [
+            FootStatus {
+                last_col: Some(3),
+                repeated: 0,
+            },
+            FootStatus {
+                last_col: Some(5),
+                repeated: 0,
+            },
+        ];
+        gen.next_foot = Foot::Left;
         assert_eq!(gen.prob(0), 0.5);
         assert_eq!(gen.prob(3), 1.);
         assert_eq!(gen.prob(4), 1.);
