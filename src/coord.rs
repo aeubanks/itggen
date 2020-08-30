@@ -14,12 +14,9 @@ impl Coord {
         let dy = (other.1 - self.1) as f32;
         let atan = dy.atan2(dx);
 
-        let a = atan - prev_angle; // relative to prev_angle
-
         use std::f32::consts::PI;
-        let b = (a + PI).rem_euclid(2. * PI) - PI; // a in [-PI, PI]
-
-        prev_angle + b // prev_angle offset by at most PI
+        let rotations = (prev_angle - atan + PI).div_euclid(2. * PI); // rotations to adjust atan result by
+        atan + rotations * 2. * PI
     }
 }
 
@@ -41,4 +38,8 @@ fn test_angle() {
         3. / 2. * PI
     );
     assert_relative_eq!(Coord(-1, 0).angle(&Coord(-1, -1), PI / 2. - 0.1), -PI / 2.);
+
+    let a = Coord(0, 1);
+    let b = Coord(1, 2);
+    assert_eq!(a.angle(&b, 0.221), a.angle(&b, 0.2));
 }

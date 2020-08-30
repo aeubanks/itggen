@@ -150,8 +150,8 @@ impl Generator {
     }
 
     fn calc_cur_angle(&self) -> Option<f32> {
-        let lc = self.feet_status[Foot::Right as usize].last_col?;
-        let rc = self.feet_status[Foot::Left as usize].last_col?;
+        let lc = self.feet_status[Foot::Left as usize].last_col?;
+        let rc = self.feet_status[Foot::Right as usize].last_col?;
         let l = self.style.coord(lc);
         let r = self.style.coord(rc);
         Some(l.angle(&r, self.prev_angle))
@@ -544,4 +544,27 @@ fn steps_prob() {
         assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
         assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
     }
+}
+
+#[test]
+fn test_prev_angle() {
+    use approx::assert_relative_eq;
+    use std::f32::consts::PI;
+    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+    gen.next_foot = Foot::Left;
+    gen.step(0);
+    gen.step(3);
+    assert_relative_eq!(gen.prev_angle, 0.);
+    gen.step(2);
+    assert_relative_eq!(gen.prev_angle, -PI / 4.);
+    gen.step(1);
+    assert_relative_eq!(gen.prev_angle, -PI / 2.);
+    gen.step(0);
+    assert_relative_eq!(gen.prev_angle, -PI / 4.);
+    gen.step(2);
+    assert_relative_eq!(gen.prev_angle, PI / 4.);
+    gen.step(3);
+    assert_relative_eq!(gen.prev_angle, 3. / 4. * PI);
+    gen.step(0);
+    assert_relative_eq!(gen.prev_angle, PI);
 }
