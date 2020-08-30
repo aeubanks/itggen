@@ -15,6 +15,7 @@ pub struct GeneratorParameters {
     max_angle: Option<f32>,
     angle_decay: Option<(f32, f32)>,
     max_turn: Option<f32>,
+    turn_decay: Option<(f32, f32)>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -231,6 +232,14 @@ impl Generator {
                 }
             }
         }
+        if let Some((turn, decay)) = self.params.turn_decay {
+            if let Some(a) = self.test_angle(col) {
+                let over_angle = (a - self.prev_angle).abs() - turn;
+                if over_angle > 0. {
+                    prob *= decay.powf(over_angle);
+                }
+            }
+        }
         prob
     }
 }
@@ -442,6 +451,37 @@ fn steps_prob() {
         {
             let mut params = GeneratorParameters::default();
             params.angle_decay = Some((PI / 2., 0.5));
+            let mut gen = Generator::new(Style::HorizonSingles, params);
+            gen.next_foot = Foot::Right;
+            gen.step(7);
+            gen.step(7);
+            assert_relative_eq!(gen.prob(6), 1.);
+            assert_relative_eq!(gen.prob(7), 1.);
+            assert_relative_eq!(gen.prob(8), 1.);
+            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+        }
+    }
+    // turn decay
+    {
+        {
+            let mut params = GeneratorParameters::default();
+            params.turn_decay = Some((PI / 2., 0.5));
+            let mut gen = Generator::new(Style::HorizonSingles, params);
+            gen.next_foot = Foot::Left;
+            gen.step(1);
+            gen.step(1);
+            assert_relative_eq!(gen.prob(0), 1.);
+            assert_relative_eq!(gen.prob(1), 1.);
+            assert_relative_eq!(gen.prob(2), 1.);
+            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.));
+        }
+        {
+            let mut params = GeneratorParameters::default();
+            params.turn_decay = Some((PI / 2., 0.5));
             let mut gen = Generator::new(Style::HorizonSingles, params);
             gen.next_foot = Foot::Right;
             gen.step(7);
