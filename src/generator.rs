@@ -8,6 +8,7 @@ pub struct GeneratorParameters {
     disallow_footswitch: bool,
     max_repeated: Option<i32>,
     repeated_decay: Option<(i32, f32)>,
+    max_dist_between_feet: Option<f32>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -114,10 +115,6 @@ impl Generator {
         &mut self.feet_status[self.next_foot as usize]
     }
 
-    fn prev_foot_status_mut(&mut self) -> &mut FootStatus {
-        &mut self.feet_status[self.next_foot.other() as usize]
-    }
-
     fn is_valid_col(&self, col: i8) -> bool {
         if self.params.disallow_footswitch {
             if self.prev_foot_status().last_col == Some(col) {
@@ -129,6 +126,15 @@ impl Generator {
                 && self.next_foot_status().repeated >= mr
             {
                 return false;
+            }
+        }
+        if let Some(md) = self.params.max_dist_between_feet {
+            if let Some(prev_col) = self.prev_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if prev_coord.dist(&cur_coord) + std::f32::EPSILON > md {
+                    return false;
+                }
             }
         }
         true
@@ -265,6 +271,30 @@ fn valid_steps() {
         assert_eq!(gen.valid_cols(), vec![1, 2, 3]);
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
+    }
+    // max dist two feet
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_dist_between_feet = Some(2.);
+        let mut gen = Generator {
+            style: Style::ItgDoubles,
+            params,
+            rand: StdRng::from_entropy(),
+            feet_status: [
+                FootStatus {
+                    last_col: Some(0),
+                    repeated: 0,
+                },
+                FootStatus {
+                    last_col: Some(3),
+                    repeated: 0,
+                },
+            ],
+            next_foot: Foot::Right,
+        };
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
+        gen.step(7);
+        assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
     }
 }
 
