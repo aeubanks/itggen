@@ -59,7 +59,7 @@ impl Generator {
             .into_iter()
             .map(|c| (c, self.prob(c)))
             .collect();
-        self.random(col_probs)
+        self.choose_from_probs(col_probs)
     }
 
     fn valid_cols(&self) -> Vec<i8> {
@@ -72,12 +72,16 @@ impl Generator {
         cols
     }
 
-    fn random(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
+    fn choose_from_probs(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
         let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
-        let mut prob_remaining = self.rand.gen_range(0., total_prob);
+        let prob_remaining = self.rand.gen_range(0., total_prob);
+        Self::choose_from_probs_with_prob(col_probs, prob_remaining)
+    }
+
+    fn choose_from_probs_with_prob(col_probs: Vec<(i8, f32)>, mut prob: f32) -> i8 {
         for (c, p) in &col_probs {
-            prob_remaining -= p;
-            if prob_remaining <= 0. {
+            prob -= p;
+            if prob <= 0. {
                 return *c;
             }
         }
@@ -132,6 +136,22 @@ impl Generator {
     fn prob(&self, col: i8) -> f32 {
         1.
     }
+}
+
+#[test]
+fn test_choose_from_probs_with_prob() {
+    assert_eq!(
+        Generator::choose_from_probs_with_prob(vec![(5, 0.1)], 0.05),
+        5
+    );
+    assert_eq!(
+        Generator::choose_from_probs_with_prob(vec![(5, 0.1), (6, 0.1)], 0.05),
+        5
+    );
+    assert_eq!(
+        Generator::choose_from_probs_with_prob(vec![(5, 0.1), (6, 0.1)], 0.15),
+        6
+    );
 }
 
 #[test]
