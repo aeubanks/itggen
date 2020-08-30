@@ -97,7 +97,7 @@ impl Generator {
         if self.next_foot_status().last_col == Some(col) {
             self.next_foot_status_mut().repeated += 1;
         } else {
-            self.next_foot_status_mut().repeated = 0;
+            self.next_foot_status_mut().repeated = 1;
         }
         self.next_foot_status_mut().last_col = Some(col);
 
@@ -284,11 +284,11 @@ fn valid_steps() {
             rand: StdRng::from_entropy(),
             feet_status: [
                 FootStatus {
-                    last_col: Some(0),
+                    last_col: Some(1),
                     repeated: 0,
                 },
                 FootStatus {
-                    last_col: Some(3),
+                    last_col: Some(2),
                     repeated: 0,
                 },
             ],
@@ -366,11 +366,11 @@ fn steps_prob() {
             rand: StdRng::from_entropy(),
             feet_status: [
                 FootStatus {
-                    last_col: Some(0),
+                    last_col: Some(1),
                     repeated: 0,
                 },
                 FootStatus {
-                    last_col: Some(3),
+                    last_col: Some(2),
                     repeated: 0,
                 },
             ],
