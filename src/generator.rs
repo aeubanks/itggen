@@ -16,12 +16,14 @@ pub struct GeneratorParameters {
     angle_decay: Option<(f32, f32)>,
     max_turn: Option<f32>,
     turn_decay: Option<(f32, f32)>,
+    preserve_input_repetitions: bool,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
 struct FootStatus {
     pub last_col: Option<i8>,
     pub repeated: i32,
+    pub last_input_col: Option<i8>,
 }
 
 pub struct Generator {
@@ -53,13 +55,34 @@ impl Generator {
 
 impl Generator {
     pub fn gen(&mut self) -> i8 {
+        self.gen_impl(None)
+    }
+
+    pub fn gen_with_input_col(&mut self, input_col: i8) -> i8 {
+        if self.params.preserve_input_repetitions {
+            if self.next_foot_status().last_input_col == Some(input_col) {
+                if let Some(lc) = self.next_foot_status().last_col {
+                    self.step_with_input_col(lc, input_col);
+                    return lc;
+                }
+            } else if self.prev_foot_status().last_input_col == Some(input_col) {
+                if let Some(lc) = self.prev_foot_status().last_col {
+                    self.step_without_switching_feet(lc, input_col);
+                    return lc;
+                }
+            }
+        }
+        self.gen_impl(Some(input_col))
+    }
+
+    fn gen_impl(&mut self, input_col: Option<i8>) -> i8 {
         let col;
         if self.next_foot_status().last_col.is_none() {
             col = self.style.init_col(self.next_foot);
         } else {
             col = self.choose();
         }
-        self.step(col);
+        self.step_impl(col, input_col, true);
         col
     }
 
@@ -99,17 +122,39 @@ impl Generator {
     }
 
     fn step(&mut self, col: i8) {
-        if self.next_foot_status().last_col == Some(col) {
-            self.next_foot_status_mut().repeated += 1;
-        } else {
-            self.next_foot_status_mut().repeated = 1;
-        }
-        self.next_foot_status_mut().last_col = Some(col);
+        self.step_impl(col, None, true)
+    }
 
-        self.next_foot = self.next_foot.other();
+    fn step_with_input_col(&mut self, col: i8, input_col: i8) {
+        self.step_impl(col, Some(input_col), true)
+    }
+
+    fn step_without_switching_feet(&mut self, col: i8, input_col: i8) {
+        self.step_impl(col, Some(input_col), false)
+    }
+
+    fn step_impl(&mut self, col: i8, input_col: Option<i8>, switch_feet: bool) {
+        let foot_status = if switch_feet {
+            self.next_foot_status_mut()
+        } else {
+            self.prev_foot_status_mut()
+        };
+
+        if foot_status.last_col == Some(col) {
+            foot_status.repeated += 1;
+        } else {
+            foot_status.repeated = 1;
+        }
+
+        foot_status.last_col = Some(col);
+        foot_status.last_input_col = input_col;
 
         if let Some(a) = self.calc_cur_angle() {
             self.prev_angle = a;
+        }
+
+        if switch_feet {
+            self.next_foot = self.next_foot.other();
         }
     }
 }
@@ -126,6 +171,10 @@ impl Generator {
 
     fn next_foot_status_mut(&mut self) -> &mut FootStatus {
         &mut self.feet_status[self.next_foot as usize]
+    }
+
+    fn prev_foot_status_mut(&mut self) -> &mut FootStatus {
+        &mut self.feet_status[self.next_foot.other() as usize]
     }
 
     fn test_angle(&self, col: i8) -> Option<f32> {
@@ -282,6 +331,51 @@ fn first_steps() {
         assert_eq!(gen.gen(), 3);
         assert_eq!(gen.gen(), 0);
     }
+}
+
+#[test]
+fn state() {
+    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+    let f = gen.next_foot;
+    assert_eq!(gen.next_foot_status().last_col, None);
+    assert_eq!(gen.prev_foot_status().last_col, None);
+    let c = gen.gen();
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_col, None);
+    assert_eq!(gen.prev_foot_status().last_col, Some(c));
+}
+
+#[test]
+fn preserve_input_repetitions() {
+    let mut params = GeneratorParameters::default();
+    params.preserve_input_repetitions = true;
+    let mut gen = Generator::new(Style::HorizonDoubles, params);
+
+    let f = gen.next_foot;
+    let c1 = gen.gen_with_input_col(7);
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, None);
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+
+    assert_eq!(gen.gen_with_input_col(7), c1);
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, None);
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+
+    let c2 = gen.gen_with_input_col(6);
+    assert_eq!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+
+    assert_eq!(gen.gen_with_input_col(7), c1);
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, Some(6));
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+
+    assert_eq!(gen.gen_with_input_col(6), c2);
+    assert_eq!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
 }
 
 #[test]
