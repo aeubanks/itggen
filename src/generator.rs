@@ -62,7 +62,6 @@ impl Generator {
 }
 
 impl Generator {
-    #[must_use]
     pub fn gen(&mut self) -> i8 {
         let col;
         if self.feet_status[self.next_foot as usize].last_col.is_none() {
