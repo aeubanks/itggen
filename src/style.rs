@@ -51,6 +51,18 @@ impl Style {
             },
         }
     }
+
+    pub fn init_pos(&self) -> Coord {
+        (self.coord(self.init_col(Foot::Left)) + self.coord(self.init_col(Foot::Right))) * 0.5
+    }
+
+    pub fn max_x_coord(&self) -> f32 {
+        match self {
+            Style::ItgSingles | Style::PumpSingles | Style::HorizonSingles => 2.0,
+            Style::ItgDoubles | Style::PumpDoubles | Style::HorizonDoubles => 5.0,
+        }
+    }
+
     pub fn coord(&self, col: i8) -> Coord {
         match self {
             Style::ItgSingles => match col {

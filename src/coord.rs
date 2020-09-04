@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul, Sub};
+
 #[derive(Copy, Clone, Debug)]
 pub struct Coord(pub f32, pub f32);
 
@@ -17,6 +19,30 @@ impl Coord {
         use std::f32::consts::PI;
         let rotations = (prev_angle - atan + PI).div_euclid(2. * PI); // rotations to adjust atan result by
         atan + rotations * 2. * PI
+    }
+}
+
+impl Add for Coord {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl Sub for Coord {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+
+impl Mul<f32> for Coord {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self(self.0 * rhs, self.1 * rhs)
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::coord::Coord;
 use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
@@ -17,6 +18,7 @@ pub struct GeneratorParameters {
     max_turn: Option<f32>,
     turn_decay: Option<(f32, f32)>,
     preserve_input_repetitions: Option<f32>,
+    doubles_movement: Option<(f32, f32)>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -26,6 +28,29 @@ struct FootStatus {
     pub last_input_col: Option<i8>,
 }
 
+#[derive(Debug, Copy, Clone)]
+struct Zone {
+    start: Coord,
+    end: Coord,
+    steps: i32,
+    total_steps_until_end: i32,
+}
+
+impl Zone {
+    fn step(&mut self) {
+        self.steps += 1;
+    }
+
+    fn is_done(&self) -> bool {
+        self.steps >= self.total_steps_until_end
+    }
+
+    fn center(&self) -> Coord {
+        let ratio = self.steps as f32 / self.total_steps_until_end as f32;
+        self.start + (self.end - self.start) * ratio
+    }
+}
+
 pub struct Generator {
     style: Style,
     params: GeneratorParameters,
@@ -33,6 +58,7 @@ pub struct Generator {
     feet_status: [FootStatus; 2],
     next_foot: Foot,
     prev_angle: f32,
+    zone: Zone,
 }
 
 impl Generator {
@@ -42,6 +68,8 @@ impl Generator {
             .map(|s| StdRng::seed_from_u64(s))
             .unwrap_or_else(|| StdRng::from_entropy());
         let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
+        let zone_end = Self::rand_zone_end(&mut rand, style);
+        let zone_steps = Self::rand_zone_total_steps(&mut rand);
         Self {
             style,
             params,
@@ -49,6 +77,12 @@ impl Generator {
             feet_status: [FootStatus::default(); 2],
             next_foot,
             prev_angle: 0.,
+            zone: Zone {
+                start: style.init_pos(),
+                end: zone_end,
+                steps: 0,
+                total_steps_until_end: zone_steps,
+            },
         }
     }
 }
@@ -155,9 +189,45 @@ impl Generator {
             self.prev_angle = a;
         }
 
+        self.zone.step();
+
+        if self.params.doubles_movement.is_some() {
+            let next_end = self.next_zone_end();
+            let next_total_steps = self.next_zone_total_steps();
+            if self.zone.is_done() {
+                self.zone = Zone {
+                    start: self.zone.end,
+                    end: next_end,
+                    steps: 0,
+                    total_steps_until_end: next_total_steps,
+                };
+            }
+        }
+
         if switch_feet {
             self.next_foot = self.next_foot.other();
         }
+    }
+
+    fn next_zone_end(&mut self) -> Coord {
+        Self::rand_zone_end(&mut self.rand, self.style)
+    }
+
+    fn next_zone_total_steps(&mut self) -> i32 {
+        Self::rand_zone_total_steps(&mut self.rand)
+    }
+
+    fn rand_zone_end(rand: &mut StdRng, style: Style) -> Coord {
+        let max = style.max_x_coord() - 1.0;
+        if max <= 1.0 {
+            return Coord(1.0, 1.0);
+        }
+        let rx = rand.gen_range(1.0, max);
+        Coord(rx, 1.0)
+    }
+
+    fn rand_zone_total_steps(rand: &mut StdRng) -> i32 {
+        rand.gen_range(16, 32)
     }
 }
 
@@ -302,6 +372,14 @@ impl Generator {
                 if input_col != last_input_col && Some(col) == self.next_foot_status().last_col {
                     prob *= different_decay;
                 }
+            }
+        }
+        if let Some((dist, decay)) = self.params.doubles_movement {
+            let center = self.zone.center();
+            let cur_coord = self.style.coord(col);
+            let over_dist = center.dist(&cur_coord) - dist;
+            if over_dist > 0. {
+                prob *= decay.powf(over_dist);
             }
         }
         prob
@@ -613,6 +691,35 @@ fn steps_prob() {
         assert_eq!(gen.prob_with_input_col(0, 5), 0.5);
         assert_eq!(gen.prob_with_input_col(1, 4), 1.);
         assert_eq!(gen.prob_with_input_col(1, 5), 1.);
+    }
+    // doubles movement distance decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.doubles_movement = Some((1., 0.5));
+        let mut gen = Generator::new(Style::HorizonDoubles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(7);
+        gen.zone = Zone {
+            start: Coord(0.0, 1.0),
+            end: Coord(5.0, 1.0),
+            steps: 0,
+            total_steps_until_end: 5,
+        };
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(7), 0.5);
+        assert_eq!(gen.prob(10), 0.25);
+        gen.step(1);
+        dbg!(gen.zone);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(10), 0.5);
     }
 }
 
