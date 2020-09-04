@@ -321,7 +321,7 @@ impl Generator {
     }
 
     fn prob_with_input_col(&self, col: i8, input_col: i8) -> f32 {
-        let mut prob = 1.;
+        let mut prob = 1.0;
         if let Some((repeated, decay)) = self.params.repeated_decay {
             if self.next_foot_status().last_col == Some(col) {
                 let over_repeated = self.next_foot_status().repeated - repeated;
@@ -441,7 +441,7 @@ fn state() {
 #[test]
 fn preserve_input_repetitions() {
     let mut params = GeneratorParameters::default();
-    params.preserve_input_repetitions = Some(1.);
+    params.preserve_input_repetitions = Some(1.0);
     let mut gen = Generator::new(Style::HorizonDoubles, params);
 
     let f = gen.next_foot;
@@ -585,9 +585,9 @@ fn steps_prob() {
         gen.step(3);
         gen.step(0);
         gen.step(3);
-        assert_eq!(gen.prob(0), 1.);
+        assert_eq!(gen.prob(0), 1.0);
         gen.step(0);
-        assert_eq!(gen.prob(3), 1.);
+        assert_eq!(gen.prob(3), 1.0);
         gen.step(3);
         assert_eq!(gen.prob(0), 0.5);
         gen.step(0);
@@ -600,27 +600,27 @@ fn steps_prob() {
     // dist between feet decay
     {
         let mut params = GeneratorParameters::default();
-        params.dist_between_feet_decay = Some((1., 0.5));
+        params.dist_between_feet_decay = Some((1.0, 0.5));
         let mut gen = Generator::new(Style::ItgDoubles, params);
         gen.next_foot = Foot::Right;
         gen.step(4);
         gen.step(3);
         assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.);
-        assert_eq!(gen.prob(4), 1.);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
         assert_eq!(gen.prob(7), 0.25);
     }
     // dist between foot steps decay
     {
         let mut params = GeneratorParameters::default();
-        params.dist_between_steps_decay = Some((1., 0.5));
+        params.dist_between_steps_decay = Some((1.0, 0.5));
         let mut gen = Generator::new(Style::ItgDoubles, params);
         gen.next_foot = Foot::Left;
         gen.step(3);
         gen.step(5);
         assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.);
-        assert_eq!(gen.prob(4), 1.);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
         assert_eq!(gen.prob(7), 0.25);
     }
     // angle decay
@@ -640,9 +640,9 @@ fn steps_prob() {
             gen.next_foot = Foot::Right;
             gen.step(7);
             gen.step(7);
-            assert_relative_eq!(gen.prob(6), 1.);
-            assert_relative_eq!(gen.prob(7), 1.);
-            assert_relative_eq!(gen.prob(8), 1.);
+            assert_relative_eq!(gen.prob(6), 1.0);
+            assert_relative_eq!(gen.prob(7), 1.0);
+            assert_relative_eq!(gen.prob(8), 1.0);
             assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
             assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
             assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
@@ -657,9 +657,9 @@ fn steps_prob() {
             gen.next_foot = Foot::Left;
             gen.step(1);
             gen.step(1);
-            assert_relative_eq!(gen.prob(0), 1.);
-            assert_relative_eq!(gen.prob(1), 1.);
-            assert_relative_eq!(gen.prob(2), 1.);
+            assert_relative_eq!(gen.prob(0), 1.0);
+            assert_relative_eq!(gen.prob(1), 1.0);
+            assert_relative_eq!(gen.prob(2), 1.0);
             assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
             assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
             assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.));
@@ -671,9 +671,9 @@ fn steps_prob() {
             gen.next_foot = Foot::Right;
             gen.step(7);
             gen.step(7);
-            assert_relative_eq!(gen.prob(6), 1.);
-            assert_relative_eq!(gen.prob(7), 1.);
-            assert_relative_eq!(gen.prob(8), 1.);
+            assert_relative_eq!(gen.prob(6), 1.0);
+            assert_relative_eq!(gen.prob(7), 1.0);
+            assert_relative_eq!(gen.prob(8), 1.0);
             assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
             assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
             assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
@@ -687,15 +687,15 @@ fn steps_prob() {
         gen.next_foot = Foot::Left;
         gen.step_with_input_col(0, 4);
         gen.step_with_input_col(3, 8);
-        assert_eq!(gen.prob_with_input_col(0, 4), 1.);
+        assert_eq!(gen.prob_with_input_col(0, 4), 1.0);
         assert_eq!(gen.prob_with_input_col(0, 5), 0.5);
-        assert_eq!(gen.prob_with_input_col(1, 4), 1.);
-        assert_eq!(gen.prob_with_input_col(1, 5), 1.);
+        assert_eq!(gen.prob_with_input_col(1, 4), 1.0);
+        assert_eq!(gen.prob_with_input_col(1, 5), 1.0);
     }
     // doubles movement distance decay
     {
         let mut params = GeneratorParameters::default();
-        params.doubles_movement = Some((1., 0.5));
+        params.doubles_movement = Some((1.0, 0.5));
         let mut gen = Generator::new(Style::HorizonDoubles, params);
         gen.next_foot = Foot::Left;
         gen.step(1);
