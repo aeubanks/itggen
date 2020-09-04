@@ -16,7 +16,7 @@ pub struct GeneratorParameters {
     angle_decay: Option<(f32, f32)>,
     max_turn: Option<f32>,
     turn_decay: Option<(f32, f32)>,
-    preserve_input_repetitions: bool,
+    preserve_input_repetitions: Option<f32>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -59,7 +59,7 @@ impl Generator {
     }
 
     pub fn gen_with_input_col(&mut self, input_col: i8) -> i8 {
-        if self.params.preserve_input_repetitions {
+        if self.params.preserve_input_repetitions.is_some() {
             if self.next_foot_status().last_input_col == Some(input_col) {
                 if let Some(lc) = self.next_foot_status().last_col {
                     self.step_with_input_col(lc, input_col);
@@ -80,17 +80,17 @@ impl Generator {
         if self.next_foot_status().last_col.is_none() {
             col = self.style.init_col(self.next_foot);
         } else {
-            col = self.choose();
+            col = self.choose(input_col);
         }
         self.step_impl(col, input_col, true);
         col
     }
 
-    fn choose(&mut self) -> i8 {
+    fn choose(&mut self, input_col: Option<i8>) -> i8 {
         let col_probs: Vec<(i8, f32)> = self
             .valid_cols()
             .into_iter()
-            .map(|c| (c, self.prob(c)))
+            .map(|c| (c, self.prob(c, input_col)))
             .collect();
         self.choose_from_probs(col_probs)
     }
@@ -244,7 +244,7 @@ impl Generator {
         true
     }
 
-    fn prob(&self, col: i8) -> f32 {
+    fn prob(&self, col: i8, input_col: Option<i8>) -> f32 {
         let mut prob = 1.;
         if let Some((repeated, decay)) = self.params.repeated_decay {
             if self.next_foot_status().last_col == Some(col) {
@@ -287,6 +287,17 @@ impl Generator {
                 let over_angle = (a - self.prev_angle).abs() - turn;
                 if over_angle > 0. {
                     prob *= decay.powf(over_angle);
+                }
+            }
+        }
+        // if input column is same as previous input column, penalize if same column as before
+        if let Some(different_decay) = self.params.preserve_input_repetitions {
+            if let Some(input_col) = input_col {
+                if let Some(last_input_col) = self.next_foot_status().last_input_col {
+                    if input_col != last_input_col && Some(col) == self.next_foot_status().last_col
+                    {
+                        prob *= different_decay;
+                    }
                 }
             }
         }
@@ -349,7 +360,7 @@ fn state() {
 #[test]
 fn preserve_input_repetitions() {
     let mut params = GeneratorParameters::default();
-    params.preserve_input_repetitions = true;
+    params.preserve_input_repetitions = Some(1.);
     let mut gen = Generator::new(Style::HorizonDoubles, params);
 
     let f = gen.next_foot;
@@ -493,17 +504,17 @@ fn steps_prob() {
         gen.step(3);
         gen.step(0);
         gen.step(3);
-        assert_eq!(gen.prob(0), 1.);
+        assert_eq!(gen.prob(0, None), 1.);
         gen.step(0);
-        assert_eq!(gen.prob(3), 1.);
+        assert_eq!(gen.prob(3, None), 1.);
         gen.step(3);
-        assert_eq!(gen.prob(0), 0.5);
+        assert_eq!(gen.prob(0, None), 0.5);
         gen.step(0);
-        assert_eq!(gen.prob(3), 0.5);
+        assert_eq!(gen.prob(3, None), 0.5);
         gen.step(3);
-        assert_eq!(gen.prob(0), 0.25);
+        assert_eq!(gen.prob(0, None), 0.25);
         gen.step(0);
-        assert_eq!(gen.prob(3), 0.25);
+        assert_eq!(gen.prob(3, None), 0.25);
     }
     // dist between feet decay
     {
@@ -513,10 +524,10 @@ fn steps_prob() {
         gen.next_foot = Foot::Right;
         gen.step(4);
         gen.step(3);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.);
-        assert_eq!(gen.prob(4), 1.);
-        assert_eq!(gen.prob(7), 0.25);
+        assert_eq!(gen.prob(0, None), 0.5);
+        assert_eq!(gen.prob(3, None), 1.);
+        assert_eq!(gen.prob(4, None), 1.);
+        assert_eq!(gen.prob(7, None), 0.25);
     }
     // dist between foot steps decay
     {
@@ -526,10 +537,10 @@ fn steps_prob() {
         gen.next_foot = Foot::Left;
         gen.step(3);
         gen.step(5);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.);
-        assert_eq!(gen.prob(4), 1.);
-        assert_eq!(gen.prob(7), 0.25);
+        assert_eq!(gen.prob(0, None), 0.5);
+        assert_eq!(gen.prob(3, None), 1.);
+        assert_eq!(gen.prob(4, None), 1.);
+        assert_eq!(gen.prob(7, None), 0.25);
     }
     // angle decay
     {
@@ -548,12 +559,12 @@ fn steps_prob() {
             gen.next_foot = Foot::Right;
             gen.step(7);
             gen.step(7);
-            assert_relative_eq!(gen.prob(6), 1.);
-            assert_relative_eq!(gen.prob(7), 1.);
-            assert_relative_eq!(gen.prob(8), 1.);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+            assert_relative_eq!(gen.prob(6, None), 1.);
+            assert_relative_eq!(gen.prob(7, None), 1.);
+            assert_relative_eq!(gen.prob(8, None), 1.);
+            assert_relative_eq!(gen.prob(3, None), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(5, None), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(1, None), 0.5_f32.powf(PI / 2.));
         }
     }
     // turn decay
@@ -565,12 +576,12 @@ fn steps_prob() {
             gen.next_foot = Foot::Left;
             gen.step(1);
             gen.step(1);
-            assert_relative_eq!(gen.prob(0), 1.);
-            assert_relative_eq!(gen.prob(1), 1.);
-            assert_relative_eq!(gen.prob(2), 1.);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.));
+            assert_relative_eq!(gen.prob(0, None), 1.);
+            assert_relative_eq!(gen.prob(1, None), 1.);
+            assert_relative_eq!(gen.prob(2, None), 1.);
+            assert_relative_eq!(gen.prob(3, None), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(5, None), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(7, None), 0.5_f32.powf(PI / 2.));
         }
         {
             let mut params = GeneratorParameters::default();
@@ -579,13 +590,26 @@ fn steps_prob() {
             gen.next_foot = Foot::Right;
             gen.step(7);
             gen.step(7);
-            assert_relative_eq!(gen.prob(6), 1.);
-            assert_relative_eq!(gen.prob(7), 1.);
-            assert_relative_eq!(gen.prob(8), 1.);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+            assert_relative_eq!(gen.prob(6, None), 1.);
+            assert_relative_eq!(gen.prob(7, None), 1.);
+            assert_relative_eq!(gen.prob(8, None), 1.);
+            assert_relative_eq!(gen.prob(3, None), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(5, None), 0.5_f32.powf(PI / 4.));
+            assert_relative_eq!(gen.prob(1, None), 0.5_f32.powf(PI / 2.));
         }
+    }
+    // preserve input repetitions different decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.preserve_input_repetitions = Some(0.5);
+        let mut gen = Generator::new(Style::ItgSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step_with_input_col(0, 4);
+        gen.step_with_input_col(3, 8);
+        assert_eq!(gen.prob(0, Some(4)), 1.);
+        assert_eq!(gen.prob(0, Some(5)), 0.5);
+        assert_eq!(gen.prob(1, Some(4)), 1.);
+        assert_eq!(gen.prob(1, Some(5)), 1.);
     }
 }
 
