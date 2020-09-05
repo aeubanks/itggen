@@ -6,6 +6,7 @@ use std::str::FromStr;
 pub enum Style {
     ItgSingles,
     ItgDoubles,
+    ItgTriples,
     PumpSingles,
     PumpDoubles,
     HorizonSingles,
@@ -22,6 +23,7 @@ impl FromStr for Style {
         match s {
             "itg-singles" => Ok(Style::ItgSingles),
             "itg-doubles" => Ok(Style::ItgDoubles),
+            "itg-triples" => Ok(Style::ItgTriples),
             "pump-singles" => Ok(Style::PumpSingles),
             "pump-doubles" => Ok(Style::PumpDoubles),
             "horizon-singles" => Ok(Style::HorizonSingles),
@@ -42,6 +44,7 @@ impl Style {
         match self {
             Style::ItgSingles => 4,
             Style::ItgDoubles => 8,
+            Style::ItgTriples => 12,
             Style::PumpSingles => 5,
             Style::PumpDoubles => 10,
             Style::HorizonSingles => 9,
@@ -53,6 +56,7 @@ impl Style {
         match self {
             Style::ItgSingles => "dance-single",
             Style::ItgDoubles => "dance-double",
+            Style::ItgTriples => "triple-single",
             Style::PumpSingles => "pump-single",
             Style::PumpDoubles => "pump-double",
             Style::HorizonSingles => "horizon-single",
@@ -69,6 +73,10 @@ impl Style {
             Style::ItgDoubles => match foot {
                 Foot::Left => 3,
                 Foot::Right => 4,
+            },
+            Style::ItgTriples => match foot {
+                Foot::Left => 4,
+                Foot::Right => 7,
             },
             Style::PumpSingles => match foot {
                 Foot::Left => 0,
@@ -97,6 +105,7 @@ impl Style {
         match self {
             Style::ItgSingles | Style::PumpSingles | Style::HorizonSingles => 2.0,
             Style::ItgDoubles | Style::PumpDoubles | Style::HorizonDoubles => 5.0,
+            Style::ItgTriples => 8.0,
         }
     }
 
@@ -118,6 +127,21 @@ impl Style {
                 5 => Coord(4.0, 0.0),
                 6 => Coord(4.0, 2.0),
                 7 => Coord(5.0, 1.0),
+                _ => panic!(),
+            },
+            Style::ItgTriples => match col {
+                0 => Coord(0.0, 1.0),
+                1 => Coord(1.0, 0.0),
+                2 => Coord(1.0, 2.0),
+                3 => Coord(2.0, 1.0),
+                4 => Coord(3.0, 1.0),
+                5 => Coord(4.0, 0.0),
+                6 => Coord(4.0, 2.0),
+                7 => Coord(5.0, 1.0),
+                8 => Coord(6.0, 1.0),
+                9 => Coord(7.0, 0.0),
+                10 => Coord(7.0, 2.0),
+                11 => Coord(8.0, 1.0),
                 _ => panic!(),
             },
             Style::PumpSingles => match col {
