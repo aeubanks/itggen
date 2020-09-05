@@ -42,6 +42,7 @@ fn main() -> std::io::Result<()> {
         turn_decay: None,
         preserve_input_repetitions: Some(0.1),
         doubles_movement: Some((1.5, 0.2)),
+        disallow_foot_opposite_side: true,
     };
 
     for p in opts.inputs {

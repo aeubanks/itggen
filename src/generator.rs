@@ -19,6 +19,7 @@ pub struct GeneratorParameters {
     pub turn_decay: Option<(f32, f32)>,
     pub preserve_input_repetitions: Option<f32>,
     pub doubles_movement: Option<(f32, f32)>,
+    pub disallow_foot_opposite_side: bool,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -317,6 +318,21 @@ impl Generator {
                 }
             }
         }
+        if self.params.disallow_foot_opposite_side {
+            let coord = self.style.coord(col);
+            match self.next_foot {
+                Foot::Left => {
+                    if coord.0 >= self.style.max_x_coord() - Self::EPSILON {
+                        return false;
+                    }
+                }
+                Foot::Right => {
+                    if coord.0 <= Self::EPSILON {
+                        return false;
+                    }
+                }
+            }
+        }
         true
     }
 
@@ -573,6 +589,16 @@ fn valid_steps() {
         gen.step(5);
         gen.step(4);
         assert_eq!(gen.valid_cols(), vec![1, 2, 4, 5, 6, 7]);
+    }
+    // foot other side
+    {
+        let mut params = GeneratorParameters::default();
+        params.disallow_foot_opposite_side = true;
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Left;
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6]);
+        gen.next_foot = Foot::Right;
+        assert_eq!(gen.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
     }
 }
 
