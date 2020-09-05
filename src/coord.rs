@@ -4,7 +4,7 @@ use std::ops::{Add, Mul, Sub};
 pub struct Coord(pub f32, pub f32);
 
 impl Coord {
-    pub fn dist(&self, other: &Self) -> f32 {
+    pub fn dist(&self, other: Self) -> f32 {
         let dx = other.0 - self.0;
         let dy = other.1 - self.1;
         (dx * dx + dy * dy).sqrt()

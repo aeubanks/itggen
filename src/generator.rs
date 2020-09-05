@@ -284,7 +284,7 @@ impl Generator {
             if let Some(prev_col) = self.prev_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                if prev_coord.dist(&cur_coord) > md + Self::EPSILON {
+                if prev_coord.dist(cur_coord) > md + Self::EPSILON {
                     return false;
                 }
             }
@@ -293,7 +293,7 @@ impl Generator {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                if prev_coord.dist(&cur_coord) > md + Self::EPSILON {
+                if prev_coord.dist(cur_coord) > md + Self::EPSILON {
                     return false;
                 }
             }
@@ -334,7 +334,7 @@ impl Generator {
             if let Some(prev_col) = self.prev_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                let over_dist = prev_coord.dist(&cur_coord) - dist;
+                let over_dist = prev_coord.dist(cur_coord) - dist;
                 if over_dist > 0. {
                     prob *= decay.powf(over_dist);
                 }
@@ -344,7 +344,7 @@ impl Generator {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                let over_dist = prev_coord.dist(&cur_coord) - dist;
+                let over_dist = prev_coord.dist(cur_coord) - dist;
                 if over_dist > 0. {
                     prob *= decay.powf(over_dist);
                 }
@@ -377,7 +377,7 @@ impl Generator {
         if let Some((dist, decay)) = self.params.doubles_movement {
             let center = self.zone.center();
             let cur_coord = self.style.coord(col);
-            let over_dist = center.dist(&cur_coord) - dist;
+            let over_dist = center.dist(cur_coord) - dist;
             if over_dist > 0. {
                 prob *= decay.powf(over_dist);
             }
