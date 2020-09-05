@@ -69,7 +69,7 @@ impl Generator {
             .unwrap_or_else(|| StdRng::from_entropy());
         let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
         let zone_end = Self::rand_zone_end(&mut rand, style);
-        let zone_steps = Self::rand_zone_total_steps(&mut rand);
+        let zone_steps = Self::rand_zone_total_steps(&mut rand, style.init_pos().dist(zone_end));
         Self {
             style,
             params,
@@ -192,9 +192,9 @@ impl Generator {
         self.zone.step();
 
         if self.params.doubles_movement.is_some() {
-            let next_end = self.next_zone_end();
-            let next_total_steps = self.next_zone_total_steps();
             if self.zone.is_done() {
+                let next_end = self.next_zone_end();
+                let next_total_steps = self.next_zone_total_steps(self.zone.end.dist(next_end));
                 self.zone = Zone {
                     start: self.zone.end,
                     end: next_end,
@@ -213,21 +213,26 @@ impl Generator {
         Self::rand_zone_end(&mut self.rand, self.style)
     }
 
-    fn next_zone_total_steps(&mut self) -> i32 {
-        Self::rand_zone_total_steps(&mut self.rand)
+    fn next_zone_total_steps(&mut self, dist_from_prev: f32) -> i32 {
+        Self::rand_zone_total_steps(&mut self.rand, dist_from_prev)
     }
 
     fn rand_zone_end(rand: &mut StdRng, style: Style) -> Coord {
-        let max = style.max_x_coord() - 1.0;
-        if max <= 1.0 {
+        let max = style.max_x_coord() - 0.5;
+        if max <= 0.5 {
             return Coord(1.0, 1.0);
         }
-        let rx = rand.gen_range(1.0, max);
+        let rx = rand.gen_range(0.5, max);
         Coord(rx, 1.0)
     }
 
-    fn rand_zone_total_steps(rand: &mut StdRng) -> i32 {
-        rand.gen_range(16, 32)
+    fn rand_zone_total_steps(rand: &mut StdRng, dist_from_prev: f32) -> i32 {
+        let ret = if dist_from_prev <= 1.0 {
+            rand.gen_range(4, 8)
+        } else {
+            rand.gen_range(8, 32)
+        };
+        ret
     }
 }
 
@@ -713,7 +718,6 @@ fn steps_prob() {
         assert_eq!(gen.prob(7), 0.5);
         assert_eq!(gen.prob(10), 0.25);
         gen.step(1);
-        dbg!(gen.zone);
         assert_eq!(gen.prob(1), 1.0);
         assert_eq!(gen.prob(3), 1.0);
         assert_eq!(gen.prob(4), 1.0);
