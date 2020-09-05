@@ -5,20 +5,20 @@ use rand::prelude::*;
 
 #[derive(Copy, Clone, Default)]
 pub struct GeneratorParameters {
-    seed: Option<u64>,
-    disallow_footswitch: bool,
-    max_repeated: Option<i32>,
-    repeated_decay: Option<(i32, f32)>,
-    max_dist_between_feet: Option<f32>,
-    dist_between_feet_decay: Option<(f32, f32)>,
-    max_dist_between_steps: Option<f32>,
-    dist_between_steps_decay: Option<(f32, f32)>,
-    max_angle: Option<f32>,
-    angle_decay: Option<(f32, f32)>,
-    max_turn: Option<f32>,
-    turn_decay: Option<(f32, f32)>,
-    preserve_input_repetitions: Option<f32>,
-    doubles_movement: Option<(f32, f32)>,
+    pub seed: Option<u64>,
+    pub disallow_footswitch: bool,
+    pub max_repeated: Option<i32>,
+    pub repeated_decay: Option<(i32, f32)>,
+    pub max_dist_between_feet: Option<f32>,
+    pub dist_between_feet_decay: Option<(f32, f32)>,
+    pub max_dist_between_steps: Option<f32>,
+    pub dist_between_steps_decay: Option<(f32, f32)>,
+    pub max_angle: Option<f32>,
+    pub angle_decay: Option<(f32, f32)>,
+    pub max_turn: Option<f32>,
+    pub turn_decay: Option<(f32, f32)>,
+    pub preserve_input_repetitions: Option<f32>,
+    pub doubles_movement: Option<(f32, f32)>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]

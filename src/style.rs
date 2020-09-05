@@ -1,5 +1,6 @@
 use crate::coord::Coord;
 use crate::foot::Foot;
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Style {
@@ -11,6 +12,31 @@ pub enum Style {
     HorizonDoubles,
 }
 
+#[derive(Debug)]
+pub struct StyleParseError;
+
+impl FromStr for Style {
+    type Err = StyleParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "itg-singles" => Ok(Style::ItgSingles),
+            "itg-doubles" => Ok(Style::ItgDoubles),
+            "pump-singles" => Ok(Style::PumpSingles),
+            "pump-doubles" => Ok(Style::PumpDoubles),
+            "horizon-singles" => Ok(Style::HorizonSingles),
+            "horizon-doubles" => Ok(Style::HorizonDoubles),
+            _ => Err(StyleParseError),
+        }
+    }
+}
+
+impl ToString for StyleParseError {
+    fn to_string(&self) -> String {
+        "could not parse style".to_owned()
+    }
+}
+
 impl Style {
     pub fn num_cols(&self) -> i8 {
         match self {
@@ -20,6 +46,17 @@ impl Style {
             Style::PumpDoubles => 10,
             Style::HorizonSingles => 9,
             Style::HorizonDoubles => 18,
+        }
+    }
+
+    pub fn sm_string(&self) -> &str {
+        match self {
+            Style::ItgSingles => "dance-single",
+            Style::ItgDoubles => "dance-double",
+            Style::PumpSingles => "pump-single",
+            Style::PumpDoubles => "pump-double",
+            Style::HorizonSingles => "horizon-single",
+            Style::HorizonDoubles => "horizon-double",
         }
     }
 
