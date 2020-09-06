@@ -36,6 +36,8 @@ fn main() -> std::io::Result<()> {
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(2.0),
         dist_between_steps_decay: Some((1.5, 0.3)),
+        max_horizontal_dist_between_3_steps: None,
+        horizontal_dist_between_3_steps_decay: Some((1.5, 0.2)),
         max_angle: Some(PI / 2.0),
         angle_decay: None,
         max_turn: None,

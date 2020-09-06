@@ -13,6 +13,8 @@ pub struct GeneratorParameters {
     pub dist_between_feet_decay: Option<(f32, f32)>,
     pub max_dist_between_steps: Option<f32>,
     pub dist_between_steps_decay: Option<(f32, f32)>,
+    pub max_horizontal_dist_between_3_steps: Option<f32>,
+    pub horizontal_dist_between_3_steps_decay: Option<(f32, f32)>,
     pub max_angle: Option<f32>,
     pub angle_decay: Option<(f32, f32)>,
     pub max_turn: Option<f32>,
@@ -24,6 +26,7 @@ pub struct GeneratorParameters {
 
 #[derive(Debug, Default, Copy, Clone)]
 struct FootStatus {
+    pub last_last_col: Option<i8>,
     pub last_col: Option<i8>,
     pub repeated: i32,
     pub last_input_col: Option<i8>,
@@ -183,6 +186,7 @@ impl Generator {
             foot_status.repeated = 1;
         }
 
+        foot_status.last_last_col = foot_status.last_col;
         foot_status.last_col = Some(col);
         foot_status.last_input_col = Some(input_col);
 
@@ -239,6 +243,7 @@ impl Generator {
 
 impl Generator {
     const EPSILON: f32 = 0.00001;
+
     fn next_foot_status(&self) -> &FootStatus {
         &self.feet_status[self.next_foot as usize]
     }
@@ -300,6 +305,15 @@ impl Generator {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
                 if prev_coord.dist(cur_coord) > md + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
+        if let Some(md) = self.params.max_horizontal_dist_between_3_steps {
+            if let Some(prev_col) = self.next_foot_status().last_last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
                     return false;
                 }
             }
@@ -366,6 +380,16 @@ impl Generator {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
                 let over_dist = prev_coord.dist(cur_coord) - dist;
+                if over_dist > 0. {
+                    prob *= decay.powf(over_dist);
+                }
+            }
+        }
+        if let Some((dist, decay)) = self.params.horizontal_dist_between_3_steps_decay {
+            if let Some(prev_col) = self.next_foot_status().last_last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
                 if over_dist > 0. {
                     prob *= decay.powf(over_dist);
                 }
@@ -562,6 +586,25 @@ fn valid_steps() {
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
     }
+    // max horizontal dist same foot 3 steps
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_horizontal_dist_between_3_steps = Some(1.5);
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(2);
+        gen.step(8);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        gen.step(5);
+        gen.step(8);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
+        gen.step(6);
+        gen.step(8);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        gen.step(5);
+        gen.step(8);
+        assert_eq!(gen.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
+    }
     // max angle
     {
         let mut params = GeneratorParameters::default();
@@ -653,6 +696,57 @@ fn steps_prob() {
         assert_eq!(gen.prob(3), 1.0);
         assert_eq!(gen.prob(4), 1.0);
         assert_eq!(gen.prob(7), 0.25);
+    }
+    // horizontal dist between 3 foot steps decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.horizontal_dist_between_3_steps_decay = Some((1.0, 0.5));
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(2);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
+        gen.step(5);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 0.5);
+        assert_eq!(gen.prob(7), 0.5);
+        assert_eq!(gen.prob(8), 0.5);
+        gen.step(6);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
+        gen.step(5);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 0.5);
+        assert_eq!(gen.prob(1), 0.5);
+        assert_eq!(gen.prob(2), 0.5);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
     }
     // angle decay
     {
