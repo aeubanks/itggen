@@ -42,23 +42,50 @@ struct FootStatus {
 struct Zone {
     start: Coord,
     end: Coord,
-    steps: i32,
-    total_steps_until_end: i32,
+    total_move_steps: i32,
+    steps_until_end: i32,
 }
 
 impl Zone {
     fn step(&mut self) {
-        self.steps += 1;
+        self.steps_until_end -= 1;
     }
 
     fn is_done(&self) -> bool {
-        self.steps >= self.total_steps_until_end
+        self.steps_until_end <= 0
     }
 
     fn center(&self) -> Coord {
-        let ratio = self.steps as f32 / self.total_steps_until_end as f32;
+        let ratio =
+            (self.total_move_steps - self.steps_until_end) as f32 / self.total_move_steps as f32;
         self.start + (self.end - self.start) * ratio
     }
+}
+
+#[test]
+fn test_zone() {
+    let mut z = Zone {
+        start: Coord(1.0, 0.0),
+        end: Coord(7.0, 3.0),
+        total_move_steps: 6,
+        steps_until_end: 6,
+    };
+    assert!(!z.is_done());
+    assert_eq!(z.center(), Coord(1.0, 0.0));
+    z.step();
+    assert_eq!(z.center(), Coord(2.0, 0.5));
+    z.step();
+    assert_eq!(z.center(), Coord(3.0, 1.0));
+    z.step();
+    assert_eq!(z.center(), Coord(4.0, 1.5));
+    z.step();
+    assert_eq!(z.center(), Coord(5.0, 2.0));
+    z.step();
+    assert!(!z.is_done());
+    assert_eq!(z.center(), Coord(6.0, 2.5));
+    z.step();
+    assert!(z.is_done());
+    assert_eq!(z.center(), Coord(7.0, 3.0));
 }
 
 pub struct Generator {
@@ -78,8 +105,7 @@ impl Generator {
             .map(|s| StdRng::seed_from_u64(s))
             .unwrap_or_else(|| StdRng::from_entropy());
         let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
-        let zone_end = Self::rand_zone_end(&mut rand, style);
-        let zone_steps = Self::rand_zone_total_steps(&mut rand, style.init_pos().dist(zone_end));
+        let zone = Self::rand_zone(&mut rand, style, style.init_pos());
         Self {
             style,
             params,
@@ -87,12 +113,7 @@ impl Generator {
             feet_status: [FootStatus::default(); 2],
             next_foot,
             prev_angle: 0.0,
-            zone: Zone {
-                start: style.init_pos(),
-                end: zone_end,
-                steps: 0,
-                total_steps_until_end: zone_steps,
-            },
+            zone,
         }
     }
 }
@@ -200,18 +221,10 @@ impl Generator {
             self.prev_angle = a;
         }
 
-        self.zone.step();
-
         if self.params.doubles_movement.is_some() {
+            self.zone.step();
             if self.zone.is_done() {
-                let next_end = self.next_zone_end();
-                let next_total_steps = self.next_zone_total_steps(self.zone.end.dist(next_end));
-                self.zone = Zone {
-                    start: self.zone.end,
-                    end: next_end,
-                    steps: 0,
-                    total_steps_until_end: next_total_steps,
-                };
+                self.zone = self.next_zone();
             }
         }
 
@@ -220,30 +233,41 @@ impl Generator {
         }
     }
 
-    fn next_zone_end(&mut self) -> Coord {
-        Self::rand_zone_end(&mut self.rand, self.style)
+    fn next_zone(&mut self) -> Zone {
+        Self::rand_zone(&mut self.rand, self.style, self.zone.end)
     }
 
-    fn next_zone_total_steps(&mut self, dist_from_prev: f32) -> i32 {
-        Self::rand_zone_total_steps(&mut self.rand, dist_from_prev)
-    }
-
-    fn rand_zone_end(rand: &mut StdRng, style: Style) -> Coord {
-        let max = style.max_x_coord() - 0.5;
-        if max <= 0.5 {
-            return Coord(1.0, 1.0);
+    fn rand_zone(rand: &mut StdRng, style: Style, prev_coord: Coord) -> Zone {
+        const DIST_FROM_EDGE: f32 = 0.2;
+        let max = style.max_x_coord() - DIST_FROM_EDGE;
+        if max <= DIST_FROM_EDGE {
+            return Zone {
+                start: prev_coord,
+                end: Coord(style.center_x(), 1.0),
+                total_move_steps: 1,
+                steps_until_end: 1,
+            };
         }
-        let rx = rand.gen_range(0.5, max);
-        Coord(rx, 1.0)
-    }
+        let rx = loop {
+            let rx = if prev_coord.0 < style.center_x() {
+                rand.gen_range(style.center_x(), style.max_x_coord() - DIST_FROM_EDGE)
+            } else {
+                rand.gen_range(DIST_FROM_EDGE, style.center_x())
+            };
 
-    fn rand_zone_total_steps(rand: &mut StdRng, dist_from_prev: f32) -> i32 {
-        let ret = if dist_from_prev <= 1.0 {
-            rand.gen_range(4, 8)
-        } else {
-            rand.gen_range(8, 32)
+            let retry_range = (max - DIST_FROM_EDGE) * 0.4;
+            if (rx - prev_coord.0).abs() >= retry_range {
+                break rx;
+            }
         };
-        ret
+        let dist = (rx - prev_coord.0).abs();
+        let move_steps = (dist * 12.0).ceil() as i32;
+        Zone {
+            start: prev_coord,
+            end: Coord(rx, 1.0),
+            total_move_steps: move_steps,
+            steps_until_end: move_steps,
+        }
     }
 }
 
@@ -986,8 +1010,8 @@ fn steps_prob() {
         gen.zone = Zone {
             start: Coord(0.0, 1.0),
             end: Coord(5.0, 1.0),
-            steps: 0,
-            total_steps_until_end: 5,
+            steps_until_end: 5,
+            total_move_steps: 5,
         };
         assert_eq!(gen.prob(0), 1.0);
         assert_eq!(gen.prob(1), 1.0);

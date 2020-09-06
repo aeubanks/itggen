@@ -109,8 +109,12 @@ impl Style {
         }
     }
 
+    pub fn center_x(&self) -> f32 {
+        self.max_x_coord() / 2.0
+    }
+
     pub fn bar_coord(&self) -> Coord {
-        Coord(self.max_x_coord() / 2.0, -0.5)
+        Coord(self.center_x(), -0.5)
     }
 
     pub fn coord(&self, col: i8) -> Coord {
