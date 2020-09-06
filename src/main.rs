@@ -42,6 +42,8 @@ fn main() -> std::io::Result<()> {
         angle_decay: None,
         max_turn: None,
         turn_decay: None,
+        max_bar_angle: None,
+        bar_angle_decay: Some((0.0, 0.3)),
         preserve_input_repetitions: Some(0.1),
         doubles_movement: Some((1.5, 0.2)),
         disallow_foot_opposite_side: true,

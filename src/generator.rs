@@ -19,6 +19,8 @@ pub struct GeneratorParameters {
     pub angle_decay: Option<(f32, f32)>,
     pub max_turn: Option<f32>,
     pub turn_decay: Option<(f32, f32)>,
+    pub max_bar_angle: Option<f32>,
+    pub bar_angle_decay: Option<(f32, f32)>,
     pub preserve_input_repetitions: Option<f32>,
     pub doubles_movement: Option<(f32, f32)>,
     pub disallow_foot_opposite_side: bool,
@@ -270,6 +272,19 @@ impl Generator {
         Some(l.angle(r, self.prev_angle))
     }
 
+    fn test_bar_angle(&self, col: i8) -> Option<f32> {
+        use std::f32::consts::PI;
+        let (lc, rc) = match self.next_foot {
+            Foot::Left => (col, self.feet_status[Foot::Right as usize].last_col?),
+            Foot::Right => (self.feet_status[Foot::Left as usize].last_col?, col),
+        };
+        let l = self.style.coord(lc);
+        let r = self.style.coord(rc);
+        let langle = self.style.bar_coord().angle(l, PI / 2.0);
+        let rangle = self.style.bar_coord().angle(r, PI / 2.0);
+        Some(langle - rangle)
+    }
+
     fn calc_cur_angle(&self) -> Option<f32> {
         let lc = self.feet_status[Foot::Left as usize].last_col?;
         let rc = self.feet_status[Foot::Right as usize].last_col?;
@@ -332,6 +347,13 @@ impl Generator {
                 }
             }
         }
+        if let Some(ma) = self.params.max_bar_angle {
+            if let Some(a) = self.test_bar_angle(col) {
+                if -a > ma + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
         if self.params.disallow_foot_opposite_side {
             let coord = self.style.coord(col);
             match self.next_foot {
@@ -357,6 +379,7 @@ impl Generator {
 
     fn prob_with_input_col(&self, col: i8, input_col: i8) -> f32 {
         let mut prob = 1.0;
+        let cur_coord = self.style.coord(col);
         if let Some((repeated, decay)) = self.params.repeated_decay {
             if self.next_foot_status().last_col == Some(col) {
                 let over_repeated = self.next_foot_status().repeated - repeated;
@@ -368,7 +391,6 @@ impl Generator {
         if let Some((dist, decay)) = self.params.dist_between_feet_decay {
             if let Some(prev_col) = self.prev_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
-                let cur_coord = self.style.coord(col);
                 let over_dist = prev_coord.dist(cur_coord) - dist;
                 if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
@@ -378,7 +400,6 @@ impl Generator {
         if let Some((dist, decay)) = self.params.dist_between_steps_decay {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
-                let cur_coord = self.style.coord(col);
                 let over_dist = prev_coord.dist(cur_coord) - dist;
                 if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
@@ -388,7 +409,6 @@ impl Generator {
         if let Some((dist, decay)) = self.params.horizontal_dist_between_3_steps_decay {
             if let Some(prev_col) = self.next_foot_status().last_last_col {
                 let prev_coord = self.style.coord(prev_col);
-                let cur_coord = self.style.coord(col);
                 let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
                 if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
@@ -406,6 +426,14 @@ impl Generator {
         if let Some((turn, decay)) = self.params.turn_decay {
             if let Some(a) = self.test_angle(col) {
                 let over_angle = (a - self.prev_angle).abs() - turn;
+                if over_angle > 0.0 {
+                    prob *= decay.powf(over_angle);
+                }
+            }
+        }
+        if let Some((angle, decay)) = self.params.bar_angle_decay {
+            if let Some(a) = self.test_bar_angle(col) {
+                let over_angle = -a - angle;
                 if over_angle > 0.0 {
                     prob *= decay.powf(over_angle);
                 }
@@ -633,6 +661,28 @@ fn valid_steps() {
         gen.step(4);
         assert_eq!(gen.valid_cols(), vec![1, 2, 4, 5, 6, 7]);
     }
+    // max bar angle
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_bar_angle = Some(0.3);
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Right;
+        gen.step(4);
+        gen.step(3);
+        assert_eq!(gen.valid_cols(), vec![2, 3, 4, 5, 6, 7]);
+    }
+    // bar angle decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.bar_angle_decay = Some((0.3, 0.5));
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Right;
+        gen.step(4);
+        gen.step(3);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert!(gen.prob(1) < 1.0);
+    }
     // foot other side
     {
         let mut params = GeneratorParameters::default();
@@ -803,6 +853,18 @@ fn steps_prob() {
             assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
             assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.0));
         }
+    }
+    // bar angle decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.bar_angle_decay = Some((0.3, 0.5));
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Right;
+        gen.step(4);
+        gen.step(3);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert!(gen.prob(1) < 1.0);
     }
     // preserve input repetitions different decay
     {

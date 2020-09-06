@@ -109,6 +109,10 @@ impl Style {
         }
     }
 
+    pub fn bar_coord(&self) -> Coord {
+        Coord(self.max_x_coord() / 2.0, -0.5)
+    }
+
     pub fn coord(&self, col: i8) -> Coord {
         match self {
             Style::ItgSingles => match col {
