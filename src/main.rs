@@ -18,8 +18,8 @@ struct Opts {
     #[structopt(short)]
     from_style: Style,
 
-    #[structopt(short)]
-    to_style: Style,
+    #[structopt(short, min_values = 1)]
+    to_style: Vec<Style>,
 }
 
 fn main() -> std::io::Result<()> {
@@ -56,17 +56,22 @@ fn main() -> std::io::Result<()> {
     for p in opts.inputs {
         println!("generating for {:?}", p);
         let mut contents = std::fs::read_to_string(p.clone())?;
-        match sm::generate(&contents, opts.from_style, opts.to_style, params) {
-            Ok(s) => {
-                contents.push('\n');
-                contents.push_str(&s);
-                std::fs::write(p, contents)?;
-                println!("  done");
-            }
-            Err(e) => {
-                println!("  skipped: {}", e);
+        let mut generated = String::new();
+        for to_style in &opts.to_style {
+            println!("  {:?} -> {:?}", opts.from_style, to_style);
+            match sm::generate(&contents, opts.from_style, *to_style, params) {
+                Ok(s) => {
+                    generated.push('\n');
+                    generated.push_str(&s);
+                }
+                Err(e) => {
+                    println!("  skipped: {}", e);
+                }
             }
         }
+        contents.push_str(&generated);
+        std::fs::write(p.clone(), contents)?;
+        println!("  done");
     }
 
     let mut gen = Generator::new(Style::ItgDoubles, GeneratorParameters::default());

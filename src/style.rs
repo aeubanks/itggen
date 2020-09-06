@@ -14,7 +14,7 @@ pub enum Style {
 }
 
 #[derive(Debug)]
-pub struct StyleParseError;
+pub struct StyleParseError(String);
 
 impl FromStr for Style {
     type Err = StyleParseError;
@@ -28,14 +28,14 @@ impl FromStr for Style {
             "pump-doubles" => Ok(Style::PumpDoubles),
             "horizon-singles" => Ok(Style::HorizonSingles),
             "horizon-doubles" => Ok(Style::HorizonDoubles),
-            _ => Err(StyleParseError),
+            _ => Err(StyleParseError(s.to_owned())),
         }
     }
 }
 
 impl ToString for StyleParseError {
     fn to_string(&self) -> String {
-        "could not parse style".to_owned()
+        format!("could not parse style '{}'", self.0)
     }
 }
 
