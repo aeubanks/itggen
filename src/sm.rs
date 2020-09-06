@@ -89,6 +89,7 @@ fn generate_chart(
             return Err(format!("unknown notes line: {}", l));
         }
     }
+    println!("generated for {}", &metadata[3][0..(metadata[3].len() - 1)]);
     Ok(ret)
 }
 
