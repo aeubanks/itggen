@@ -42,6 +42,9 @@ fn generate_chart(
     let mut ret = String::new();
 
     let lines = to_lines(notes_str);
+    if lines.len() < 6 {
+        return Err("invalid metadata".to_owned());
+    }
 
     let (metadata, notes) = lines.split_at(6);
     if metadata[0] != "#NOTES:" {
@@ -136,6 +139,16 @@ fn test_generate() {
             GeneratorParameters::default(),
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Hard:\n     17:\n     :\n00000000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge;\n     17:\n     useless:\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            GeneratorParameters::default(),
+        );
+        assert!(g.is_err());
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-double:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n00000000\n;\n".to_owned();
