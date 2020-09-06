@@ -80,7 +80,7 @@ impl Generator {
             rand,
             feet_status: [FootStatus::default(); 2],
             next_foot,
-            prev_angle: 0.,
+            prev_angle: 0.0,
             zone: Zone {
                 start: style.init_pos(),
                 end: zone_end,
@@ -146,14 +146,14 @@ impl Generator {
 
     fn choose_from_probs(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
         let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
-        let prob_remaining = self.rand.gen_range(0., total_prob);
+        let prob_remaining = self.rand.gen_range(0.0, total_prob);
         Self::choose_from_probs_with_prob(col_probs, prob_remaining)
     }
 
     fn choose_from_probs_with_prob(col_probs: Vec<(i8, f32)>, mut prob: f32) -> i8 {
         for (c, p) in &col_probs {
             prob -= p;
-            if prob <= 0. {
+            if prob <= 0.0 {
                 return *c;
             }
         }
@@ -370,7 +370,7 @@ impl Generator {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
                 let over_dist = prev_coord.dist(cur_coord) - dist;
-                if over_dist > 0. {
+                if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
                 }
             }
@@ -380,7 +380,7 @@ impl Generator {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
                 let over_dist = prev_coord.dist(cur_coord) - dist;
-                if over_dist > 0. {
+                if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
                 }
             }
@@ -390,7 +390,7 @@ impl Generator {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
                 let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
-                if over_dist > 0. {
+                if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
                 }
             }
@@ -398,7 +398,7 @@ impl Generator {
         if let Some((angle, decay)) = self.params.angle_decay {
             if let Some(a) = self.test_angle(col) {
                 let over_angle = a.abs() - angle;
-                if over_angle > 0. {
+                if over_angle > 0.0 {
                     prob *= decay.powf(over_angle);
                 }
             }
@@ -406,7 +406,7 @@ impl Generator {
         if let Some((turn, decay)) = self.params.turn_decay {
             if let Some(a) = self.test_angle(col) {
                 let over_angle = (a - self.prev_angle).abs() - turn;
-                if over_angle > 0. {
+                if over_angle > 0.0 {
                     prob *= decay.powf(over_angle);
                 }
             }
@@ -423,7 +423,7 @@ impl Generator {
             let center = self.zone.center();
             let cur_coord = self.style.coord(col);
             let over_dist = center.dist(cur_coord) - dist;
-            if over_dist > 0. {
+            if over_dist > 0.0 {
                 prob *= decay.powf(over_dist);
             }
         }
@@ -565,7 +565,7 @@ fn valid_steps() {
     // max dist two feet
     {
         let mut params = GeneratorParameters::default();
-        params.max_dist_between_feet = Some(2.);
+        params.max_dist_between_feet = Some(2.0);
         let mut gen = Generator::new(Style::ItgDoubles, params);
         gen.next_foot = Foot::Right;
         gen.step(3);
@@ -577,7 +577,7 @@ fn valid_steps() {
     // max dist same foot steps
     {
         let mut params = GeneratorParameters::default();
-        params.max_dist_between_steps = Some(2.);
+        params.max_dist_between_steps = Some(2.0);
         let mut gen = Generator::new(Style::ItgDoubles, params);
         gen.next_foot = Foot::Left;
         gen.step(0);
@@ -608,7 +608,7 @@ fn valid_steps() {
     // max angle
     {
         let mut params = GeneratorParameters::default();
-        params.max_angle = Some(PI * 3. / 4.);
+        params.max_angle = Some(PI * 3.0 / 4.0);
         let mut gen = Generator::new(Style::HorizonSingles, params);
         gen.next_foot = Foot::Left;
         gen.step(1);
@@ -622,7 +622,7 @@ fn valid_steps() {
     // max turn
     {
         let mut params = GeneratorParameters::default();
-        params.max_turn = Some(PI / 2.);
+        params.max_turn = Some(PI / 2.0);
         let mut gen = Generator::new(Style::HorizonSingles, params);
         gen.next_foot = Foot::Left;
         gen.step(3);
@@ -752,7 +752,7 @@ fn steps_prob() {
     {
         {
             let mut params = GeneratorParameters::default();
-            params.angle_decay = Some((PI / 2., 0.5));
+            params.angle_decay = Some((PI / 2.0, 0.5));
             let mut gen = Generator::new(Style::HorizonSingles, params);
             gen.next_foot = Foot::Left;
             gen.step(1);
@@ -760,7 +760,7 @@ fn steps_prob() {
         }
         {
             let mut params = GeneratorParameters::default();
-            params.angle_decay = Some((PI / 2., 0.5));
+            params.angle_decay = Some((PI / 2.0, 0.5));
             let mut gen = Generator::new(Style::HorizonSingles, params);
             gen.next_foot = Foot::Right;
             gen.step(7);
@@ -768,16 +768,16 @@ fn steps_prob() {
             assert_relative_eq!(gen.prob(6), 1.0);
             assert_relative_eq!(gen.prob(7), 1.0);
             assert_relative_eq!(gen.prob(8), 1.0);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.0));
         }
     }
     // turn decay
     {
         {
             let mut params = GeneratorParameters::default();
-            params.turn_decay = Some((PI / 2., 0.5));
+            params.turn_decay = Some((PI / 2.0, 0.5));
             let mut gen = Generator::new(Style::HorizonSingles, params);
             gen.next_foot = Foot::Left;
             gen.step(1);
@@ -785,13 +785,13 @@ fn steps_prob() {
             assert_relative_eq!(gen.prob(0), 1.0);
             assert_relative_eq!(gen.prob(1), 1.0);
             assert_relative_eq!(gen.prob(2), 1.0);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.));
+            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.0));
         }
         {
             let mut params = GeneratorParameters::default();
-            params.turn_decay = Some((PI / 2., 0.5));
+            params.turn_decay = Some((PI / 2.0, 0.5));
             let mut gen = Generator::new(Style::HorizonSingles, params);
             gen.next_foot = Foot::Right;
             gen.step(7);
@@ -799,9 +799,9 @@ fn steps_prob() {
             assert_relative_eq!(gen.prob(6), 1.0);
             assert_relative_eq!(gen.prob(7), 1.0);
             assert_relative_eq!(gen.prob(8), 1.0);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.));
-            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.));
+            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.0));
         }
     }
     // preserve input repetitions different decay
@@ -855,17 +855,17 @@ fn test_prev_angle() {
     gen.next_foot = Foot::Left;
     gen.step(0);
     gen.step(3);
-    assert_relative_eq!(gen.prev_angle, 0.);
+    assert_relative_eq!(gen.prev_angle, 0.0);
     gen.step(2);
-    assert_relative_eq!(gen.prev_angle, -PI / 4.);
+    assert_relative_eq!(gen.prev_angle, -PI / 4.0);
     gen.step(1);
-    assert_relative_eq!(gen.prev_angle, -PI / 2.);
+    assert_relative_eq!(gen.prev_angle, -PI / 2.0);
     gen.step(0);
-    assert_relative_eq!(gen.prev_angle, -PI / 4.);
+    assert_relative_eq!(gen.prev_angle, -PI / 4.0);
     gen.step(2);
-    assert_relative_eq!(gen.prev_angle, PI / 4.);
+    assert_relative_eq!(gen.prev_angle, PI / 4.0);
     gen.step(3);
-    assert_relative_eq!(gen.prev_angle, 3. / 4. * PI);
+    assert_relative_eq!(gen.prev_angle, 3.0 / 4.0 * PI);
     gen.step(0);
     assert_relative_eq!(gen.prev_angle, PI);
 }

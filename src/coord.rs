@@ -17,8 +17,8 @@ impl Coord {
         let atan = dy.atan2(dx);
 
         use std::f32::consts::PI;
-        let rotations = (prev_angle - atan + PI).div_euclid(2. * PI); // rotations to adjust atan result by
-        atan + rotations * 2. * PI
+        let rotations = (prev_angle - atan + PI).div_euclid(2.0 * PI); // rotations to adjust atan result by
+        atan + rotations * 2.0 * PI
     }
 }
 
@@ -51,24 +51,24 @@ fn test_angle() {
     use approx::assert_relative_eq;
     use std::f32::consts::{FRAC_PI_2, PI};
 
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(1.0, 0.0), 0.), 0.);
-    assert_relative_eq!(Coord(1.0, 0.0).angle(&Coord(2.0, 0.0), 0.), 0.);
-    assert_relative_eq!(Coord(1.0, 0.0).angle(&Coord(1.0, 1.0), 0.), FRAC_PI_2);
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(1.0, 0.0), PI + 0.1), 2. * PI);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(1.0, 0.0), 0.0), 0.0);
+    assert_relative_eq!(Coord(1.0, 0.0).angle(&Coord(2.0, 0.0), 0.0), 0.0);
+    assert_relative_eq!(Coord(1.0, 0.0).angle(&Coord(1.0, 1.0), 0.0), FRAC_PI_2);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(1.0, 0.0), PI + 0.1), 2.0 * PI);
     assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 0.1), PI);
     assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), -0.1), -PI);
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 2. * PI - 0.1), PI);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 2.0 * PI - 0.1), PI);
     assert_relative_eq!(
-        Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 2. * PI + 0.1),
-        3. * PI
+        Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 2.0 * PI + 0.1),
+        3.0 * PI
     );
     assert_relative_eq!(
-        Coord(-1.0, 0.0).angle(&Coord(-1.0, -1.0), PI / 2. + 0.1),
-        3. / 2. * PI
+        Coord(-1.0, 0.0).angle(&Coord(-1.0, -1.0), PI / 2.0 + 0.1),
+        3.0 / 2.0 * PI
     );
     assert_relative_eq!(
-        Coord(-1.0, 0.0).angle(&Coord(-1.0, -1.0), PI / 2. - 0.1),
-        -PI / 2.
+        Coord(-1.0, 0.0).angle(&Coord(-1.0, -1.0), PI / 2.0 - 0.1),
+        -PI / 2.0
     );
 
     let a = Coord(0.0, 1.0);
