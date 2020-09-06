@@ -13,6 +13,10 @@ pub struct GeneratorParameters {
     pub dist_between_feet_decay: Option<(f32, f32)>,
     pub max_dist_between_steps: Option<f32>,
     pub dist_between_steps_decay: Option<(f32, f32)>,
+    pub max_horizontal_dist_between_steps: Option<f32>,
+    pub horizontal_dist_between_steps_decay: Option<(f32, f32)>,
+    pub max_vertical_dist_between_steps: Option<f32>,
+    pub vertical_dist_between_steps_decay: Option<(f32, f32)>,
     pub max_horizontal_dist_between_3_steps: Option<f32>,
     pub horizontal_dist_between_3_steps_decay: Option<(f32, f32)>,
     pub max_angle: Option<f32>,
@@ -324,6 +328,24 @@ impl Generator {
                 }
             }
         }
+        if let Some(md) = self.params.max_horizontal_dist_between_steps {
+            if let Some(prev_col) = self.next_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
+        if let Some(md) = self.params.max_vertical_dist_between_steps {
+            if let Some(prev_col) = self.next_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if (prev_coord.1 - cur_coord.1).abs() > md + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
         if let Some(md) = self.params.max_horizontal_dist_between_3_steps {
             if let Some(prev_col) = self.next_foot_status().last_last_col {
                 let prev_coord = self.style.coord(prev_col);
@@ -401,6 +423,24 @@ impl Generator {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let over_dist = prev_coord.dist(cur_coord) - dist;
+                if over_dist > 0.0 {
+                    prob *= decay.powf(over_dist);
+                }
+            }
+        }
+        if let Some((dist, decay)) = self.params.horizontal_dist_between_steps_decay {
+            if let Some(prev_col) = self.next_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
+                if over_dist > 0.0 {
+                    prob *= decay.powf(over_dist);
+                }
+            }
+        }
+        if let Some((dist, decay)) = self.params.vertical_dist_between_steps_decay {
+            if let Some(prev_col) = self.next_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let over_dist = (prev_coord.1 - cur_coord.1).abs() - dist;
                 if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
                 }
@@ -602,7 +642,7 @@ fn valid_steps() {
         gen.step(7);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
     }
-    // max dist same foot steps
+    // max dist steps
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_steps = Some(2.0);
@@ -613,6 +653,26 @@ fn valid_steps() {
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
+    }
+    // horizontal dist between steps decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_horizontal_dist_between_steps = Some(1.0);
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(7);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
+    }
+    // max vertical dist steps
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_vertical_dist_between_steps = Some(1.0);
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(3);
+        gen.step(7);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
     }
     // max horizontal dist same foot 3 steps
     {
@@ -734,7 +794,7 @@ fn steps_prob() {
         assert_eq!(gen.prob(4), 1.0);
         assert_eq!(gen.prob(7), 0.25);
     }
-    // dist between foot steps decay
+    // dist between steps decay
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_steps_decay = Some((1.0, 0.5));
@@ -746,6 +806,42 @@ fn steps_prob() {
         assert_eq!(gen.prob(3), 1.0);
         assert_eq!(gen.prob(4), 1.0);
         assert_eq!(gen.prob(7), 0.25);
+    }
+    // horizontal dist between steps decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.horizontal_dist_between_steps_decay = Some((1.0, 0.5));
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(7);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 0.5);
+        assert_eq!(gen.prob(7), 0.5);
+        assert_eq!(gen.prob(8), 0.5);
+    }
+    // vertical dist between steps decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.vertical_dist_between_steps_decay = Some((1.0, 0.5));
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(3);
+        gen.step(7);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 0.5);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 0.5);
+        assert_eq!(gen.prob(6), 0.5);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
     }
     // horizontal dist between 3 foot steps decay
     {
