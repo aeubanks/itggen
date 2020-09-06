@@ -12,7 +12,7 @@ use style::Style;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "itggen")]
 struct Opts {
-    #[structopt(parse(from_os_str))]
+    #[structopt(parse(from_os_str), min_values = 1)]
     inputs: Vec<PathBuf>,
 
     #[structopt(short)]
@@ -44,7 +44,7 @@ fn main() -> std::io::Result<()> {
         horizontal_dist_between_3_steps_decay: Some((1.0, 0.3)),
         max_angle: Some(PI / 2.0),
         angle_decay: None,
-        max_turn: None,
+        max_turn: Some(3.0),
         turn_decay: None,
         max_bar_angle: None,
         bar_angle_decay: Some((0.0, 0.2)),
