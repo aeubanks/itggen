@@ -11,7 +11,7 @@ impl Coord {
     }
 
     // Returns the angle between self and other, closest to prev_angle
-    pub fn angle(&self, other: &Self, prev_angle: f32) -> f32 {
+    pub fn angle(&self, other: Self, prev_angle: f32) -> f32 {
         let dx = other.0 - self.0;
         let dy = other.1 - self.1;
         let atan = dy.atan2(dx);
@@ -51,27 +51,27 @@ fn test_angle() {
     use approx::assert_relative_eq;
     use std::f32::consts::{FRAC_PI_2, PI};
 
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(1.0, 0.0), 0.0), 0.0);
-    assert_relative_eq!(Coord(1.0, 0.0).angle(&Coord(2.0, 0.0), 0.0), 0.0);
-    assert_relative_eq!(Coord(1.0, 0.0).angle(&Coord(1.0, 1.0), 0.0), FRAC_PI_2);
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(1.0, 0.0), PI + 0.1), 2.0 * PI);
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 0.1), PI);
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), -0.1), -PI);
-    assert_relative_eq!(Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 2.0 * PI - 0.1), PI);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(Coord(1.0, 0.0), 0.0), 0.0);
+    assert_relative_eq!(Coord(1.0, 0.0).angle(Coord(2.0, 0.0), 0.0), 0.0);
+    assert_relative_eq!(Coord(1.0, 0.0).angle(Coord(1.0, 1.0), 0.0), FRAC_PI_2);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(Coord(1.0, 0.0), PI + 0.1), 2.0 * PI);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(Coord(-1.0, 0.0), 0.1), PI);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(Coord(-1.0, 0.0), -0.1), -PI);
+    assert_relative_eq!(Coord(0.0, 0.0).angle(Coord(-1.0, 0.0), 2.0 * PI - 0.1), PI);
     assert_relative_eq!(
-        Coord(0.0, 0.0).angle(&Coord(-1.0, 0.0), 2.0 * PI + 0.1),
+        Coord(0.0, 0.0).angle(Coord(-1.0, 0.0), 2.0 * PI + 0.1),
         3.0 * PI
     );
     assert_relative_eq!(
-        Coord(-1.0, 0.0).angle(&Coord(-1.0, -1.0), PI / 2.0 + 0.1),
+        Coord(-1.0, 0.0).angle(Coord(-1.0, -1.0), PI / 2.0 + 0.1),
         3.0 / 2.0 * PI
     );
     assert_relative_eq!(
-        Coord(-1.0, 0.0).angle(&Coord(-1.0, -1.0), PI / 2.0 - 0.1),
+        Coord(-1.0, 0.0).angle(Coord(-1.0, -1.0), PI / 2.0 - 0.1),
         -PI / 2.0
     );
 
     let a = Coord(0.0, 1.0);
     let b = Coord(1.0, 2.0);
-    assert_eq!(a.angle(&b, 0.221), a.angle(&b, 0.2));
+    assert_eq!(a.angle(b, 0.221), a.angle(b, 0.2));
 }

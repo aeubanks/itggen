@@ -267,7 +267,7 @@ impl Generator {
         };
         let l = self.style.coord(lc);
         let r = self.style.coord(rc);
-        Some(l.angle(&r, self.prev_angle))
+        Some(l.angle(r, self.prev_angle))
     }
 
     fn calc_cur_angle(&self) -> Option<f32> {
@@ -275,7 +275,7 @@ impl Generator {
         let rc = self.feet_status[Foot::Right as usize].last_col?;
         let l = self.style.coord(lc);
         let r = self.style.coord(rc);
-        Some(l.angle(&r, self.prev_angle))
+        Some(l.angle(r, self.prev_angle))
     }
 
     fn is_valid_col(&self, col: i8) -> bool {
