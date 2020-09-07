@@ -5,7 +5,7 @@ mod sm;
 mod style;
 
 use generator::{Generator, GeneratorParameters};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use style::Style;
 
@@ -20,6 +20,33 @@ struct Opts {
 
     #[structopt(short, min_values = 1)]
     to_style: Vec<Style>,
+}
+
+fn sm_files(path: &Path) -> Vec<PathBuf> {
+    let rd = match std::fs::read_dir(&path) {
+        Ok(rd) => rd,
+        Err(_) => {
+            return vec![];
+        }
+    };
+    let mut ret = Vec::new();
+    for de in rd {
+        if let Ok(de) = de {
+            if let Ok(t) = de.file_type() {
+                if t.is_dir() {
+                    ret.append(&mut sm_files(&de.path()));
+                } else if t.is_file() {
+                    let p = de.path();
+                    if let Some(Some(ext)) = p.extension().map(|e| e.to_str()) {
+                        if ext.to_lowercase() == "sm" {
+                            ret.push(de.path());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    ret
 }
 
 fn main() -> std::io::Result<()> {
@@ -53,7 +80,13 @@ fn main() -> std::io::Result<()> {
         disallow_foot_opposite_side: true,
     };
 
-    for p in opts.inputs {
+    let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();
+
+    if files.is_empty() {
+        println!("no input files...");
+    }
+
+    for p in files {
         println!("generating for {:?}", p);
         let mut contents = std::fs::read_to_string(p.clone())?;
         let mut generated = String::new();
