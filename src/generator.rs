@@ -271,6 +271,24 @@ impl Generator {
     }
 }
 
+#[test]
+fn test_rand_zone() {
+    let mut rand = StdRng::from_entropy();
+    let style = Style::ItgDoubles;
+    assert!(
+        Generator::rand_zone(&mut rand, style, Coord(4.0, 1.0))
+            .end
+            .0
+            <= style.center_x()
+    );
+    assert!(
+        Generator::rand_zone(&mut rand, style, Coord(2.0, 1.0))
+            .end
+            .0
+            >= style.center_x()
+    );
+}
+
 impl Generator {
     const EPSILON: f32 = 0.00001;
 
