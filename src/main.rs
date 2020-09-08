@@ -20,6 +20,9 @@ struct Opts {
 
     #[structopt(short, min_values = 1)]
     to_style: Vec<Style>,
+
+    #[structopt(short)]
+    dry_run: bool,
 }
 
 fn sm_files(path: &Path) -> Vec<PathBuf> {
@@ -103,8 +106,12 @@ fn main() -> std::io::Result<()> {
             }
         }
         contents.push_str(&generated);
-        std::fs::write(p.clone(), contents)?;
-        println!("  done");
+        if opts.dry_run {
+            println!("  done (dry run)");
+        } else {
+            std::fs::write(p.clone(), contents)?;
+            println!("  done");
+        }
     }
 
     let mut gen = Generator::new(Style::ItgDoubles, GeneratorParameters::default());
