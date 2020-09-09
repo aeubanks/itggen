@@ -238,7 +238,7 @@ impl Generator {
     }
 
     fn rand_zone(rand: &mut StdRng, style: Style, prev_coord: Coord) -> Zone {
-        const DIST_FROM_EDGE: f32 = 0.2;
+        const DIST_FROM_EDGE: f32 = 0.4;
         let max = style.max_x_coord() - DIST_FROM_EDGE;
         if max <= DIST_FROM_EDGE {
             return Zone {

@@ -77,8 +77,8 @@ fn main() -> std::io::Result<()> {
         max_turn: Some(3.0),
         turn_decay: None,
         max_bar_angle: None,
-        bar_angle_decay: Some((0.0, 0.2)),
-        preserve_input_repetitions: Some(0.1),
+        bar_angle_decay: Some((0.0, 0.1)),
+        preserve_input_repetitions: Some(0.0),
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: true,
     };
