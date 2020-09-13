@@ -238,7 +238,7 @@ impl Generator {
     }
 
     fn rand_zone(rand: &mut StdRng, style: Style, prev_coord: Coord) -> Zone {
-        const DIST_FROM_EDGE: f32 = 0.4;
+        const DIST_FROM_EDGE: f32 = 0.5;
         let max = style.max_x_coord() - DIST_FROM_EDGE;
         if max <= DIST_FROM_EDGE {
             return Zone {
@@ -248,23 +248,18 @@ impl Generator {
                 steps_until_end: 1,
             };
         }
-        let rx = loop {
-            let rx = if prev_coord.0 < style.center_x() {
-                rand.gen_range(style.center_x(), style.max_x_coord() - DIST_FROM_EDGE)
-            } else {
-                rand.gen_range(DIST_FROM_EDGE, style.center_x())
-            };
-
-            let retry_range = (max - DIST_FROM_EDGE) * 0.4;
-            if (rx - prev_coord.0).abs() >= retry_range {
-                break rx;
-            }
+        let x_dest = if prev_coord.0 < style.center_x() {
+            max
+        } else {
+            DIST_FROM_EDGE
         };
-        let dist = (rx - prev_coord.0).abs();
-        let move_steps = (dist * 12.0).ceil() as i32;
+
+        let dist = (x_dest - prev_coord.0).abs();
+        let steps_per_dist = rand.gen_range(8.0, 12.0);
+        let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start: prev_coord,
-            end: Coord(rx, 1.0),
+            end: Coord(x_dest, 1.0),
             total_move_steps: move_steps,
             steps_until_end: move_steps,
         }
