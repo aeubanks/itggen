@@ -91,7 +91,13 @@ fn main() -> std::io::Result<()> {
 
     for p in files {
         println!("generating for {:?}", p);
-        let mut contents = std::fs::read_to_string(p.clone())?;
+        let mut contents = match std::fs::read_to_string(p.clone()) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("  couldn't read file: {}", e);
+                continue;
+            }
+        };
         let mut generated = String::new();
         for to_style in &opts.to_style {
             println!("  {:?} -> {:?}", opts.from_style, to_style);
