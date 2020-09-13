@@ -633,10 +633,13 @@ fn valid_steps() {
         for style in &[
             Style::ItgSingles,
             Style::ItgDoubles,
+            Style::ItgTriples,
             Style::PumpSingles,
             Style::PumpDoubles,
+            Style::PumpTriples,
             Style::HorizonSingles,
             Style::HorizonDoubles,
+            Style::HorizonTriples,
         ] {
             let params = GeneratorParameters::default();
             let gen = Generator::new(*style, params);

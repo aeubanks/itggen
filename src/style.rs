@@ -9,8 +9,10 @@ pub enum Style {
     ItgTriples,
     PumpSingles,
     PumpDoubles,
+    PumpTriples,
     HorizonSingles,
     HorizonDoubles,
+    HorizonTriples,
 }
 
 #[derive(Debug)]
@@ -26,8 +28,10 @@ impl FromStr for Style {
             "itg-triples" => Ok(Style::ItgTriples),
             "pump-singles" => Ok(Style::PumpSingles),
             "pump-doubles" => Ok(Style::PumpDoubles),
+            "pump-triples" => Ok(Style::PumpTriples),
             "horizon-singles" => Ok(Style::HorizonSingles),
             "horizon-doubles" => Ok(Style::HorizonDoubles),
+            "horizon-triples" => Ok(Style::HorizonTriples),
             _ => Err(StyleParseError(s.to_owned())),
         }
     }
@@ -47,8 +51,10 @@ impl Style {
             Style::ItgTriples => 12,
             Style::PumpSingles => 5,
             Style::PumpDoubles => 10,
+            Style::PumpTriples => 15,
             Style::HorizonSingles => 9,
             Style::HorizonDoubles => 18,
+            Style::HorizonTriples => 27,
         }
     }
 
@@ -56,11 +62,13 @@ impl Style {
         match self {
             Style::ItgSingles => "dance-single",
             Style::ItgDoubles => "dance-double",
-            Style::ItgTriples => "triple-single",
+            Style::ItgTriples => "dance-triple",
             Style::PumpSingles => "pump-single",
             Style::PumpDoubles => "pump-double",
+            Style::PumpTriples => "pump-triple",
             Style::HorizonSingles => "horizon-single",
             Style::HorizonDoubles => "horizon-double",
+            Style::HorizonTriples => "horizon-triple",
         }
     }
 
@@ -86,6 +94,10 @@ impl Style {
                 Foot::Left => 4,
                 Foot::Right => 5,
             },
+            Style::PumpTriples => match foot {
+                Foot::Left => 5,
+                Foot::Right => 9,
+            },
             Style::HorizonSingles => match foot {
                 Foot::Left => 1,
                 Foot::Right => 7,
@@ -93,6 +105,10 @@ impl Style {
             Style::HorizonDoubles => match foot {
                 Foot::Left => 7,
                 Foot::Right => 10,
+            },
+            Style::HorizonTriples => match foot {
+                Foot::Left => 9,
+                Foot::Right => 15,
             },
         }
     }
@@ -105,7 +121,7 @@ impl Style {
         match self {
             Style::ItgSingles | Style::PumpSingles | Style::HorizonSingles => 2.0,
             Style::ItgDoubles | Style::PumpDoubles | Style::HorizonDoubles => 5.0,
-            Style::ItgTriples => 8.0,
+            Style::ItgTriples | Style::PumpTriples | Style::HorizonTriples => 8.0,
         }
     }
 
@@ -173,6 +189,24 @@ impl Style {
                 9 => Coord(5.0, 0.0),
                 _ => panic!(),
             },
+            Style::PumpTriples => match col {
+                0 => Coord(0.0, 0.0),
+                1 => Coord(0.0, 2.0),
+                2 => Coord(1.0, 1.0),
+                3 => Coord(2.0, 2.0),
+                4 => Coord(2.0, 0.0),
+                5 => Coord(3.0, 0.0),
+                6 => Coord(3.0, 2.0),
+                7 => Coord(4.0, 1.0),
+                8 => Coord(5.0, 2.0),
+                9 => Coord(5.0, 0.0),
+                10 => Coord(6.0, 0.0),
+                11 => Coord(6.0, 2.0),
+                12 => Coord(7.0, 1.0),
+                13 => Coord(8.0, 2.0),
+                14 => Coord(8.0, 0.0),
+                _ => panic!(),
+            },
             Style::HorizonSingles => match col {
                 0 => Coord(0.0, 0.0),
                 1 => Coord(0.0, 1.0),
@@ -204,6 +238,36 @@ impl Style {
                 15 => Coord(5.0, 2.0),
                 16 => Coord(5.0, 1.0),
                 17 => Coord(5.0, 0.0),
+                _ => panic!(),
+            },
+            Style::HorizonTriples => match col {
+                0 => Coord(0.0, 0.0),
+                1 => Coord(0.0, 1.0),
+                2 => Coord(0.0, 2.0),
+                3 => Coord(1.0, 0.0),
+                4 => Coord(1.0, 1.0),
+                5 => Coord(1.0, 2.0),
+                6 => Coord(2.0, 2.0),
+                7 => Coord(2.0, 1.0),
+                8 => Coord(2.0, 0.0),
+                9 => Coord(3.0, 0.0),
+                10 => Coord(3.0, 1.0),
+                11 => Coord(3.0, 2.0),
+                12 => Coord(4.0, 0.0),
+                13 => Coord(4.0, 1.0),
+                14 => Coord(4.0, 2.0),
+                15 => Coord(5.0, 2.0),
+                16 => Coord(5.0, 1.0),
+                17 => Coord(5.0, 0.0),
+                18 => Coord(6.0, 0.0),
+                19 => Coord(6.0, 1.0),
+                20 => Coord(6.0, 2.0),
+                21 => Coord(7.0, 0.0),
+                22 => Coord(7.0, 1.0),
+                23 => Coord(7.0, 2.0),
+                24 => Coord(8.0, 2.0),
+                25 => Coord(8.0, 1.0),
+                26 => Coord(8.0, 0.0),
                 _ => panic!(),
             },
         }
