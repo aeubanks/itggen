@@ -15,10 +15,10 @@ struct Opts {
     #[structopt(parse(from_os_str), min_values = 1)]
     inputs: Vec<PathBuf>,
 
-    #[structopt(short)]
+    #[structopt(short, long = "from")]
     from_style: Style,
 
-    #[structopt(short, min_values = 1)]
+    #[structopt(short, long = "to", min_values = 1, use_delimiter = true)]
     to_style: Vec<Style>,
 
     #[structopt(short)]
