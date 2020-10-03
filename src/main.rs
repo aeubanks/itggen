@@ -22,6 +22,9 @@ struct Opts {
     to_style: Vec<Style>,
 
     #[structopt(short)]
+    remove_existing_autogen: bool,
+
+    #[structopt(short)]
     dry_run: bool,
 }
 
@@ -98,6 +101,17 @@ fn main() -> std::io::Result<()> {
                 continue;
             }
         };
+        if opts.remove_existing_autogen {
+            match sm::remove_existing_autogen(&contents) {
+                Ok(s) => {
+                    contents = s;
+                }
+                Err(e) => {
+                    println!("  couldn't remove existing autogen: {}", e);
+                    continue;
+                }
+            }
+        }
         let mut generated = String::new();
         for to_style in &opts.to_style {
             println!("  {:?} -> {:?}", opts.from_style, to_style);

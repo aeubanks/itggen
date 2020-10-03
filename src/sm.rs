@@ -113,7 +113,7 @@ pub fn generate(
         };
         let notes_str = &contents[notes_idx..=semicolon_idx];
         ret.push_str(&generate_chart(notes_str, from_style, to_style, params)?);
-        search_from = semicolon_idx;
+        search_from = semicolon_idx + 1;
     }
 
     Ok(ret)
@@ -180,5 +180,67 @@ fn test_generate() {
             GeneratorParameters::default(),
         );
         assert!(g.is_err());
+    }
+}
+
+pub fn remove_existing_autogen(contents: &str) -> Result<String, String> {
+    let mut ret = String::new();
+    let mut search_from = 0;
+    while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
+        // Add everything up until the latest #NOTES
+        ret.push_str(&contents[search_from..notes_idx]);
+        let semicolon_idx = match find_start_at(&contents, notes_idx, ";") {
+            Some(i) => i,
+            None => {
+                return Err("couldn't find semicolon after #NOTES".to_owned());
+            }
+        };
+        let notes_str = &contents[notes_idx..=semicolon_idx];
+        if !notes_str.contains("AYEAG -") {
+            ret.push_str(notes_str);
+        }
+        search_from = semicolon_idx + 1;
+    }
+    // Add everything after the last semicolon (or beginning if no #NOTES)
+    ret.push_str(&contents[search_from..]);
+    Ok(ret)
+}
+
+#[test]
+fn test_remove_existing_autogen() {
+    {
+        let orig = "".to_owned();
+        assert_eq!(remove_existing_autogen(&orig).unwrap(), orig);
+    }
+    {
+        let orig = "HIHI".to_owned();
+        assert_eq!(remove_existing_autogen(&orig).unwrap(), orig);
+    }
+    {
+        let orig = "ABC\nDEF\n#NOTES:\nasdf:\nAYEAG - 1:\n;\n".to_owned();
+        assert_eq!(
+            remove_existing_autogen(&orig).unwrap(),
+            "ABC\nDEF\n\n".to_owned()
+        );
+    }
+    {
+        let orig = "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n".to_owned();
+        assert_eq!(remove_existing_autogen(&orig).unwrap(), orig);
+    }
+    {
+        let orig =
+            "ABC\nDEF\n#NOTES:\nasdf:\nAYEAG - 1:\n;\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;".to_owned();
+        assert_eq!(
+            remove_existing_autogen(&orig).unwrap(),
+            "ABC\nDEF\n\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;".to_owned()
+        );
+    }
+    {
+        let orig =
+            "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n#NOTES:\nasdf:\nAYEAG - 1:\n;\n".to_owned();
+        assert_eq!(
+            remove_existing_autogen(&orig).unwrap(),
+            "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n\n".to_owned()
+        );
     }
 }
