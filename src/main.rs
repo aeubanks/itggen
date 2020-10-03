@@ -38,6 +38,9 @@ struct Opts {
     #[structopt(short, help = "Remove existing autogen charts before generating")]
     remove_existing_autogen: bool,
 
+    #[structopt(short, help = "Preserve arrow jacks/changes from input chart")]
+    preserve_input_repetitions: bool,
+
     #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
 }
@@ -78,7 +81,7 @@ fn main() -> std::io::Result<()> {
         seed: None,
         disallow_footswitch: true,
         max_repeated: None,
-        repeated_decay: Some((2, 0.2)),
+        repeated_decay: Some((1, 0.2)),
         max_dist_between_feet: Some(2.9),
         dist_between_feet_decay: None,
         max_dist_between_steps: None,
@@ -95,7 +98,11 @@ fn main() -> std::io::Result<()> {
         turn_decay: None,
         max_bar_angle: None,
         bar_angle_decay: Some((0.0, 0.1)),
-        preserve_input_repetitions: Some(0.0),
+        preserve_input_repetitions: if opts.preserve_input_repetitions {
+            Some(0.0)
+        } else {
+            None
+        },
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: true,
     };
