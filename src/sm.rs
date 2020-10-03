@@ -53,7 +53,7 @@ fn generate_chart(
     ret.push_str("#NOTES:\n");
     if metadata[1] != format!("{}:", from_style.sm_string()) {
         println!(
-            "skipping {} chart",
+            "  skipping {} chart",
             &metadata[1][0..(metadata[1].len() - 1)]
         );
         return Ok("".to_owned());
@@ -89,7 +89,10 @@ fn generate_chart(
             return Err(format!("unknown notes line: {}", l));
         }
     }
-    println!("generated for {}", &metadata[3][0..(metadata[3].len() - 1)]);
+    println!(
+        "  generated for {}",
+        &metadata[3][0..(metadata[3].len() - 1)]
+    );
     Ok(ret)
 }
 
