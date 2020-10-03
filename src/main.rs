@@ -12,19 +12,33 @@ use style::Style;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "itggen")]
 struct Opts {
-    #[structopt(parse(from_os_str), min_values = 1)]
+    #[structopt(
+        parse(from_os_str),
+        min_values = 1,
+        help = "Paths of/directories containing .sm files to generate charts"
+    )]
     inputs: Vec<PathBuf>,
 
-    #[structopt(short, long = "from")]
+    #[structopt(
+        short,
+        long = "from",
+        help = "Style to base charts off of (e.g. 'itg-singles')"
+    )]
     from_style: Style,
 
-    #[structopt(short, long = "to", min_values = 1, use_delimiter = true)]
+    #[structopt(
+        short,
+        long = "to",
+        min_values = 1,
+        use_delimiter = true,
+        help = "Style(s) to generate (e.g. 'pump-doubles,horizon-singles')"
+    )]
     to_style: Vec<Style>,
 
-    #[structopt(short)]
+    #[structopt(short, help = "Remove existing autogen charts before generating")]
     remove_existing_autogen: bool,
 
-    #[structopt(short)]
+    #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
 }
 
