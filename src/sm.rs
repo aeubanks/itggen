@@ -62,9 +62,17 @@ fn generate_chart(
     ret.push_str(to_style.sm_string());
     ret.push_str(":\n     ");
     ret.push_str("AYEAG - ");
+    if to_style == from_style {
+        ret.push_str(&metadata[3].replace(":", ""));
+        ret.push_str(" - ");
+    }
     ret.push_str(&metadata[2]);
     ret.push_str("\n     ");
-    ret.push_str(&metadata[3]);
+    ret.push_str(if to_style == from_style {
+        "Edit:"
+    } else {
+        &metadata[3]
+    });
     ret.push_str("\n     ");
     ret.push_str(&metadata[4]);
     ret.push_str("\n     :\n");
@@ -102,7 +110,7 @@ pub fn generate(
     to_style: Style,
     params: GeneratorParameters,
 ) -> Result<String, String> {
-    if contents.contains(to_style.sm_string()) {
+    if from_style != to_style && contents.contains(to_style.sm_string()) {
         return Err(format!("already contains {} charts", to_style.sm_string()));
     }
     let mut ret = String::new();
@@ -143,6 +151,16 @@ fn test_generate() {
             GeneratorParameters::default(),
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Hard:\n     17:\n     :\n00000000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgSingles,
+            GeneratorParameters::default(),
+        );
+        assert_eq!(g, Ok("#NOTES:\n     dance-single:\n     AYEAG - Hard - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n#NOTES:\n     dance-single:\n     AYEAG - Challenge - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge;\n     17:\n     useless:\n0000\n;".to_owned();
