@@ -774,18 +774,6 @@ fn valid_steps() {
         gen.step(3);
         assert_eq!(gen.valid_cols(), vec![2, 3, 4, 5, 6, 7]);
     }
-    // bar angle decay
-    {
-        let mut params = GeneratorParameters::default();
-        params.bar_angle_decay = Some((0.3, 0.5));
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Right;
-        gen.step(4);
-        gen.step(3);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert!(gen.prob(1) < 1.0);
-    }
     // foot other side
     {
         let mut params = GeneratorParameters::default();
