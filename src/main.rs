@@ -5,6 +5,7 @@ mod sm;
 mod style;
 
 use generator::{Generator, GeneratorParameters};
+use std::f32::consts::PI;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use style::Style;
@@ -41,6 +42,9 @@ struct Opts {
     #[structopt(short, help = "Preserve arrow jacks/changes from input chart")]
     preserve_input_repetitions: bool,
 
+    #[structopt(short, help = "Use crossover parameters")]
+    crossover_params: bool,
+
     #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
 }
@@ -72,12 +76,8 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
     ret
 }
 
-fn main() -> std::io::Result<()> {
-    use std::f32::consts::PI;
-
-    let opts = Opts::from_args();
-
-    let params = GeneratorParameters {
+fn normal_params(preserve_input_repetitions: bool) -> GeneratorParameters {
+    GeneratorParameters {
         seed: None,
         disallow_footswitch: true,
         max_repeated: None,
@@ -94,17 +94,59 @@ fn main() -> std::io::Result<()> {
         horizontal_dist_between_3_steps_decay: Some((1.0, 0.3)),
         max_angle: Some(PI / 2.0),
         angle_decay: None,
-        max_turn: Some(3.0),
+        max_turn: None,
         turn_decay: None,
         max_bar_angle: None,
         bar_angle_decay: Some((0.0, 0.1)),
-        preserve_input_repetitions: if opts.preserve_input_repetitions {
+        preserve_input_repetitions: if preserve_input_repetitions {
             Some(0.0)
         } else {
             None
         },
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: true,
+    }
+}
+
+fn crossover_params(preserve_input_repetitions: bool) -> GeneratorParameters {
+    GeneratorParameters {
+        seed: None,
+        disallow_footswitch: true,
+        max_repeated: None,
+        repeated_decay: Some((1, 0.2)),
+        max_dist_between_feet: Some(2.9),
+        dist_between_feet_decay: None,
+        max_dist_between_steps: None,
+        dist_between_steps_decay: Some((1.5, 0.3)),
+        max_horizontal_dist_between_steps: Some(1.0),
+        horizontal_dist_between_steps_decay: None,
+        max_vertical_dist_between_steps: None,
+        vertical_dist_between_steps_decay: None,
+        max_horizontal_dist_between_3_steps: None,
+        horizontal_dist_between_3_steps_decay: Some((1.0, 0.3)),
+        max_angle: Some(PI * 3.0 / 4.0),
+        angle_decay: None,
+        max_turn: None,
+        turn_decay: None,
+        max_bar_angle: None,
+        bar_angle_decay: None,
+        preserve_input_repetitions: if preserve_input_repetitions {
+            Some(0.001)
+        } else {
+            None
+        },
+        doubles_movement: Some((1.2, 0.1)),
+        disallow_foot_opposite_side: false,
+    }
+}
+
+fn main() -> std::io::Result<()> {
+    let opts = Opts::from_args();
+
+    let params = if opts.crossover_params {
+        crossover_params(opts.preserve_input_repetitions)
+    } else {
+        normal_params(opts.preserve_input_repetitions)
     };
 
     let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();
