@@ -178,6 +178,9 @@ impl Generator {
     }
 
     fn choose_from_probs_with_prob(col_probs: Vec<(i8, f32)>, mut prob: f32) -> i8 {
+        if prob <= 0.0 && col_probs.is_empty() {
+            panic!("invalid arguments: {:?} {:?}", prob, col_probs);
+        }
         for (c, p) in &col_probs {
             prob -= p;
             if prob <= 0.0 {
