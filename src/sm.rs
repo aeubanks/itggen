@@ -18,7 +18,7 @@ fn find_start_at(slice: &str, at: usize, pat: &str) -> Option<usize> {
     slice[at..].find(pat).map(|i| at + i)
 }
 
-fn columns(s: &str) -> Option<Vec<i8>> {
+fn columns(s: &str, remove_jumps: bool) -> Option<Vec<i8>> {
     let mut ret = Vec::new();
     for (i, c) in s.chars().enumerate() {
         if match c {
@@ -29,7 +29,7 @@ fn columns(s: &str) -> Option<Vec<i8>> {
             ret.push(i as i8);
         }
     }
-    ret.truncate(2); // max 2 columns
+    ret.truncate(if remove_jumps { 1 } else { 2 }); // max 2 columns
     Some(ret)
 }
 
@@ -99,7 +99,7 @@ fn generate_chart(
 
     let mut gen = Generator::new(to_style, params);
     for l in notes {
-        if let Some(cols) = columns(&l) {
+        if let Some(cols) = columns(&l, params.remove_jumps) {
             let mut out_cols = Vec::new();
             for col in cols {
                 let idx = gen.gen_with_input_col(col);
@@ -198,6 +198,13 @@ fn test_generate() {
             GeneratorParameters::default(),
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAGF - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let mut params = GeneratorParameters::default();
+        params.remove_jumps = true;
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        assert_eq!(g.unwrap().matches('1').count(), 1);
     }
 }
 

@@ -28,6 +28,7 @@ pub struct GeneratorParameters {
     pub preserve_input_repetitions: Option<f32>,
     pub doubles_movement: Option<(f32, f32)>,
     pub disallow_foot_opposite_side: bool,
+    pub remove_jumps: bool,
 }
 
 #[derive(Debug, Default, Copy, Clone)]

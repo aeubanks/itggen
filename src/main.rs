@@ -105,6 +105,7 @@ fn normal_params(preserve_input_repetitions: bool) -> GeneratorParameters {
         },
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: true,
+        remove_jumps: false,
     }
 }
 
@@ -137,6 +138,7 @@ fn crossover_params(preserve_input_repetitions: bool) -> GeneratorParameters {
         },
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: false,
+        remove_jumps: true,
     }
 }
 
