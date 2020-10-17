@@ -45,6 +45,9 @@ struct Opts {
     #[structopt(short, help = "Use crossover parameters")]
     crossover_params: bool,
 
+    #[structopt(short, help = "Ignore difficulties below")]
+    ignore_difficulties_below: Option<i32>,
+
     #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
 }
@@ -76,7 +79,10 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
     ret
 }
 
-fn normal_params(preserve_input_repetitions: bool) -> GeneratorParameters {
+fn normal_params(
+    preserve_input_repetitions: bool,
+    ignore_difficulties_below: Option<i32>,
+) -> GeneratorParameters {
     GeneratorParameters {
         seed: None,
         disallow_footswitch: true,
@@ -106,10 +112,14 @@ fn normal_params(preserve_input_repetitions: bool) -> GeneratorParameters {
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: true,
         remove_jumps: false,
+        ignore_difficulties_below,
     }
 }
 
-fn crossover_params(preserve_input_repetitions: bool) -> GeneratorParameters {
+fn crossover_params(
+    preserve_input_repetitions: bool,
+    ignore_difficulties_below: Option<i32>,
+) -> GeneratorParameters {
     GeneratorParameters {
         seed: None,
         disallow_footswitch: true,
@@ -139,6 +149,7 @@ fn crossover_params(preserve_input_repetitions: bool) -> GeneratorParameters {
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: false,
         remove_jumps: true,
+        ignore_difficulties_below,
     }
 }
 
@@ -146,9 +157,15 @@ fn main() -> std::io::Result<()> {
     let opts = Opts::from_args();
 
     let params = if opts.crossover_params {
-        crossover_params(opts.preserve_input_repetitions)
+        crossover_params(
+            opts.preserve_input_repetitions,
+            opts.ignore_difficulties_below,
+        )
     } else {
-        normal_params(opts.preserve_input_repetitions)
+        normal_params(
+            opts.preserve_input_repetitions,
+            opts.ignore_difficulties_below,
+        )
     };
 
     let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();

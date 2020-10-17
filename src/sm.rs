@@ -101,6 +101,18 @@ fn generate_chart(
         &metadata[3]
     });
     ret.push_str("\n     ");
+    if let Some(ignore) = params.ignore_difficulties_below {
+        let difficulty = match metadata[4].replace(":", "").parse::<i32>() {
+            Ok(d) => d,
+            Err(e) => {
+                return Err(format!("Couldn't parse difficulty: {}", e));
+            }
+        };
+        if difficulty < ignore {
+            return Ok("".to_owned());
+        }
+    }
+
     ret.push_str(&metadata[4]);
     ret.push_str("\n     :\n");
 
@@ -212,6 +224,13 @@ fn test_generate() {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
         assert_eq!(g.unwrap().matches('1').count(), 1);
+    }
+    {
+        let mut params = params;
+        params.ignore_difficulties_below = Some(10);
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
     }
 }
 
