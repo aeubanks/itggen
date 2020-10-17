@@ -75,6 +75,10 @@ fn generate_chart(
         );
         return Ok("".to_owned());
     }
+    if metadata[2].contains("AYEAG") {
+        println!("  skipping existing autogen chart");
+        return Ok("".to_owned());
+    }
     ret.push_str("     ");
     ret.push_str(to_style.sm_string());
     ret.push_str(":\n     ");
@@ -237,6 +241,11 @@ fn test_generate() {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     AYEAG...:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
     }
 }
 
