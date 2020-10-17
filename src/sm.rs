@@ -80,12 +80,19 @@ fn generate_chart(
     ret.push_str(":\n     ");
     ret.push_str("AYEAG");
     let params_str = params_str(params);
-    ret.push_str(&params_str);
-    ret.push_str(" - ");
-    if to_style == from_style {
-        ret.push_str(&metadata[3].replace(":", ""));
-        ret.push_str(" - ");
+    if !params_str.is_empty() {
+        ret.push('(');
+        ret.push_str(&params_str);
+        ret.push(')');
     }
+    if to_style == from_style {
+        if let Some(c) = metadata[3].chars().next() {
+            ret.push('[');
+            ret.push(c);
+            ret.push(']');
+        }
+    }
+    ret.push_str(" - ");
     ret.push_str(&metadata[2]);
     ret.push_str("\n     ");
     ret.push_str(if to_style == from_style {
@@ -167,7 +174,7 @@ fn test_generate() {
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgSingles, params);
-        assert_eq!(g, Ok("#NOTES:\n     dance-single:\n     AYEAG - Hard - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n#NOTES:\n     dance-single:\n     AYEAG - Challenge - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n".to_owned()))
+        assert_eq!(g, Ok("#NOTES:\n     dance-single:\n     AYEAG[H] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n#NOTES:\n     dance-single:\n     AYEAG[C] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge;\n     17:\n     useless:\n0000\n;".to_owned();
@@ -197,7 +204,7 @@ fn test_generate() {
             Style::ItgDoubles,
             GeneratorParameters::default(),
         );
-        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAGF - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG(F) - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let mut params = GeneratorParameters::default();
