@@ -171,8 +171,10 @@ pub fn generate(
 
 #[test]
 fn test_generate() {
-    let mut params = GeneratorParameters::default();
-    params.disallow_footswitch = true;
+    let params = GeneratorParameters {
+        disallow_footswitch: true,
+        ..GeneratorParameters::default()
+    };
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
@@ -219,15 +221,19 @@ fn test_generate() {
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG(F) - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
     {
-        let mut params = GeneratorParameters::default();
-        params.remove_jumps = true;
+        let params = GeneratorParameters {
+            remove_jumps: true,
+            ..GeneratorParameters::default()
+        };
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
         assert_eq!(g.unwrap().matches('1').count(), 1);
     }
     {
-        let mut params = params;
-        params.ignore_difficulties_below = Some(10);
+        let params = GeneratorParameters {
+            ignore_difficulties_below: Some(10),
+            ..params
+        };
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
