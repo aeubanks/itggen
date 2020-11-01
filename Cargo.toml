@@ -7,6 +7,3 @@ edition = "2018"
 approx = "*"
 rand = "*"
 structopt = "*"
-
-[profile.release]
-lto = "thin"
