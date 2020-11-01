@@ -20,10 +20,7 @@ struct Opts {
     )]
     inputs: Vec<PathBuf>,
 
-    #[structopt(
-        short = "i",
-        help = "Style to base charts off of (e.g. 'itg-singles')"
-    )]
+    #[structopt(short = "i", help = "Style to base charts off of (e.g. 'itg-singles')")]
     from_style: Style,
 
     #[structopt(
@@ -40,8 +37,11 @@ struct Opts {
     #[structopt(short, help = "Preserve arrow jacks/changes from input chart")]
     preserve_input_repetitions: bool,
 
-    #[structopt(short, help = "Use crossover parameters")]
-    crossover_params: bool,
+    #[structopt(short, help = "Allow crossovers")]
+    crossovers: bool,
+
+    #[structopt(short, help = "Allow footswitches")]
+    footswitches: bool,
 
     #[structopt(short, help = "Skip difficulties below")]
     skip_difficulties_below: Option<i32>,
@@ -77,76 +77,41 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
     ret
 }
 
-fn normal_params(
+fn create_params(
+    crossovers: bool,
     preserve_input_repetitions: bool,
+    disallow_footswitch: bool,
     skip_difficulties_below: Option<i32>,
 ) -> GeneratorParameters {
     GeneratorParameters {
         seed: None,
-        disallow_footswitch: true,
+        disallow_footswitch,
         max_repeated: None,
-        repeated_decay: Some((1, 0.2)),
+        repeated_decay: Some((1, if disallow_footswitch { 0.2 } else { 0.1 })),
         max_dist_between_feet: Some(2.9),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(2.9),
         dist_between_steps_decay: Some((1.5, 0.3)),
-        max_horizontal_dist_between_steps: Some(1.0),
+        max_horizontal_dist_between_steps: if crossovers { None } else { Some(1.0) },
         horizontal_dist_between_steps_decay: None,
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
         max_horizontal_dist_between_3_steps: None,
-        horizontal_dist_between_3_steps_decay: Some((1.0, 0.3)),
-        max_angle: Some(PI / 2.0),
+        horizontal_dist_between_3_steps_decay: Some((1.0, if crossovers { 0.4 } else { 0.3 })),
+        max_angle: Some(if crossovers { PI * 3.0 / 4.0 } else { PI / 2.0 }),
         angle_decay: None,
         max_turn: None,
         turn_decay: None,
         max_bar_angle: None,
-        bar_angle_decay: Some((0.0, 0.1)),
+        bar_angle_decay: Some((0.0, if crossovers { 0.4 } else { 0.1 })),
         preserve_input_repetitions: if preserve_input_repetitions {
-            Some(0.0)
+            Some(if crossovers { 0.001 } else { 0.0 })
         } else {
             None
         },
         doubles_movement: Some((1.2, 0.1)),
-        disallow_foot_opposite_side: true,
-        remove_jumps: false,
-        skip_difficulties_below,
-    }
-}
-
-fn crossover_params(
-    preserve_input_repetitions: bool,
-    skip_difficulties_below: Option<i32>,
-) -> GeneratorParameters {
-    GeneratorParameters {
-        seed: None,
-        disallow_footswitch: true,
-        max_repeated: None,
-        repeated_decay: Some((1, 0.2)),
-        max_dist_between_feet: Some(2.9),
-        dist_between_feet_decay: None,
-        max_dist_between_steps: Some(2.9),
-        dist_between_steps_decay: Some((1.5, 0.3)),
-        max_horizontal_dist_between_steps: None,
-        horizontal_dist_between_steps_decay: None,
-        max_vertical_dist_between_steps: None,
-        vertical_dist_between_steps_decay: None,
-        max_horizontal_dist_between_3_steps: None,
-        horizontal_dist_between_3_steps_decay: Some((1.0, 0.4)),
-        max_angle: Some(PI * 3.0 / 4.0),
-        angle_decay: None,
-        max_turn: None,
-        turn_decay: None,
-        max_bar_angle: None,
-        bar_angle_decay: Some((0.0, 0.4)),
-        preserve_input_repetitions: if preserve_input_repetitions {
-            Some(0.001)
-        } else {
-            None
-        },
-        doubles_movement: Some((1.2, 0.1)),
-        disallow_foot_opposite_side: false,
-        remove_jumps: true,
+        disallow_foot_opposite_side: !crossovers,
+        remove_jumps: crossovers,
         skip_difficulties_below,
     }
 }
@@ -154,17 +119,12 @@ fn crossover_params(
 fn main() -> std::io::Result<()> {
     let opts = Opts::from_args();
 
-    let params = if opts.crossover_params {
-        crossover_params(
-            opts.preserve_input_repetitions,
-            opts.skip_difficulties_below,
-        )
-    } else {
-        normal_params(
-            opts.preserve_input_repetitions,
-            opts.skip_difficulties_below,
-        )
-    };
+    let params = create_params(
+        opts.crossovers,
+        opts.preserve_input_repetitions,
+        !opts.footswitches,
+        opts.skip_difficulties_below,
+    );
 
     let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();
 
