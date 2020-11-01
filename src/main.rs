@@ -21,15 +21,13 @@ struct Opts {
     inputs: Vec<PathBuf>,
 
     #[structopt(
-        short,
-        long = "from",
+        short = "i",
         help = "Style to base charts off of (e.g. 'itg-singles')"
     )]
     from_style: Style,
 
     #[structopt(
-        short,
-        long = "to",
+        short = "o",
         min_values = 1,
         use_delimiter = true,
         help = "Style(s) to generate (e.g. 'pump-doubles,horizon-singles')"
@@ -45,8 +43,8 @@ struct Opts {
     #[structopt(short, help = "Use crossover parameters")]
     crossover_params: bool,
 
-    #[structopt(short, help = "Ignore difficulties below")]
-    ignore_difficulties_below: Option<i32>,
+    #[structopt(short, help = "Skip difficulties below")]
+    skip_difficulties_below: Option<i32>,
 
     #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
@@ -81,7 +79,7 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
 
 fn normal_params(
     preserve_input_repetitions: bool,
-    ignore_difficulties_below: Option<i32>,
+    skip_difficulties_below: Option<i32>,
 ) -> GeneratorParameters {
     GeneratorParameters {
         seed: None,
@@ -112,13 +110,13 @@ fn normal_params(
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: true,
         remove_jumps: false,
-        ignore_difficulties_below,
+        skip_difficulties_below,
     }
 }
 
 fn crossover_params(
     preserve_input_repetitions: bool,
-    ignore_difficulties_below: Option<i32>,
+    skip_difficulties_below: Option<i32>,
 ) -> GeneratorParameters {
     GeneratorParameters {
         seed: None,
@@ -149,7 +147,7 @@ fn crossover_params(
         doubles_movement: Some((1.2, 0.1)),
         disallow_foot_opposite_side: false,
         remove_jumps: true,
-        ignore_difficulties_below,
+        skip_difficulties_below,
     }
 }
 
@@ -159,12 +157,12 @@ fn main() -> std::io::Result<()> {
     let params = if opts.crossover_params {
         crossover_params(
             opts.preserve_input_repetitions,
-            opts.ignore_difficulties_below,
+            opts.skip_difficulties_below,
         )
     } else {
         normal_params(
             opts.preserve_input_repetitions,
-            opts.ignore_difficulties_below,
+            opts.skip_difficulties_below,
         )
     };
 

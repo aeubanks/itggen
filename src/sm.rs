@@ -105,7 +105,7 @@ fn generate_chart(
         &metadata[3]
     });
     ret.push_str("\n     ");
-    if let Some(ignore) = params.ignore_difficulties_below {
+    if let Some(ignore) = params.skip_difficulties_below {
         let difficulty = match metadata[4].replace(":", "").parse::<i32>() {
             Ok(d) => d,
             Err(e) => {
@@ -235,7 +235,7 @@ fn test_generate() {
     }
     {
         let params = GeneratorParameters {
-            ignore_difficulties_below: Some(10),
+            skip_difficulties_below: Some(10),
             ..params
         };
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
