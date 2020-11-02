@@ -194,7 +194,7 @@ pub fn generate(
         };
         let notes_str = &contents[notes_idx..=semicolon_idx];
         let chart = parse_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
-        if from_style != to_style && chart.style == to_style.sm_string() {
+        if from_style != to_style && !chart.is_autogen() && chart.style == to_style.sm_string() {
             return Err(format!("already contains {} charts", to_style.sm_string()));
         }
         ret.push_str(&generate_chart(&chart, from_style, to_style, params)?);
@@ -234,6 +234,11 @@ fn test_generate() {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-double:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n00000000\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
         assert!(g.is_err());
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     useless:\n00000000\n;\n".to_owned();
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()));
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n".to_owned();
