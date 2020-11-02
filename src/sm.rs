@@ -51,34 +51,22 @@ fn params_str(params: GeneratorParameters) -> String {
 }
 
 fn generate_chart(
-    notes_str: &str,
+    chart: &SMChart,
     from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
 ) -> Result<String, String> {
     let mut ret = String::new();
 
-    let lines = to_lines(notes_str);
-    if lines.len() < 6 {
-        return Err("invalid metadata".to_owned());
-    }
-
-    let (metadata, notes) = lines.split_at(6);
-    if metadata[0] != "#NOTES:" {
-        return Err(format!("expected '#NOTES:', got '{}'", metadata[0]));
-    }
-    ret.push_str("#NOTES:\n");
-    if metadata[1] != format!("{}:", from_style.sm_string()) {
-        println!(
-            "  skipping {} chart",
-            &metadata[1][0..(metadata[1].len() - 1)]
-        );
+    if chart.style != from_style.sm_string() {
+        println!("  skipping {} chart", chart.style);
         return Ok("".to_owned());
     }
-    if metadata[2].contains("AYEAG") {
+    if chart.is_autogen() {
         println!("  skipping existing autogen chart");
         return Ok("".to_owned());
     }
+    ret.push_str("#NOTES:\n");
     ret.push_str("     ");
     ret.push_str(to_style.sm_string());
     ret.push_str(":\n     ");
@@ -90,38 +78,32 @@ fn generate_chart(
         ret.push(')');
     }
     if to_style == from_style {
-        if let Some(c) = metadata[3].chars().next() {
+        if let Some(c) = chart.difficulty.chars().next() {
             ret.push('[');
             ret.push(c);
             ret.push(']');
         }
     }
     ret.push_str(" - ");
-    ret.push_str(&metadata[2]);
-    ret.push_str("\n     ");
+    ret.push_str(&chart.description);
+    ret.push_str(":\n     ");
     ret.push_str(if to_style == from_style {
-        "Edit:"
+        "Edit"
     } else {
-        &metadata[3]
+        &chart.difficulty
     });
-    ret.push_str("\n     ");
+    ret.push_str(":\n     ");
     if let Some(ignore) = params.skip_difficulties_below {
-        let difficulty = match metadata[4].replace(":", "").parse::<i32>() {
-            Ok(d) => d,
-            Err(e) => {
-                return Err(format!("Couldn't parse difficulty: {}", e));
-            }
-        };
-        if difficulty < ignore {
+        if chart.level < ignore {
             return Ok("".to_owned());
         }
     }
 
-    ret.push_str(&metadata[4]);
-    ret.push_str("\n     :\n");
+    ret.push_str(&chart.level.to_string());
+    ret.push_str(":\n     :\n");
 
     let mut gen = Generator::new(to_style, params);
-    for l in notes {
+    for l in &chart.notes_lines {
         if let Some(cols) = columns(&l, params.remove_jumps) {
             let mut out_cols = Vec::new();
             for col in cols {
@@ -140,11 +122,59 @@ fn generate_chart(
             return Err(format!("unknown notes line: {}", l));
         }
     }
-    println!(
-        "  generated for {}",
-        &metadata[3][0..(metadata[3].len() - 1)]
-    );
+    println!("  generated for {}", chart.difficulty);
     Ok(ret)
+}
+
+struct SMChart {
+    style: String,
+    description: String,
+    difficulty: String,
+    level: i32,
+    notes_lines: Vec<String>,
+}
+
+impl SMChart {
+    fn is_autogen(&self) -> bool {
+        self.description.contains("AYEAG")
+    }
+}
+
+fn parse_chart(contents: &str) -> Result<SMChart, String> {
+    let lines = to_lines(contents);
+    if lines.len() < 6 {
+        return Err("invalid metadata".to_owned());
+    }
+
+    let (metadata, notes) = lines.split_at(6);
+    if metadata[0] != "#NOTES:" {
+        return Err(format!("expected '#NOTES:', got '{}'", metadata[0]));
+    }
+    let level = match metadata[4].replace(":", "").parse::<i32>() {
+        Ok(d) => d,
+        Err(e) => {
+            return Err(format!("Couldn't parse difficulty: {}", e));
+        }
+    };
+    let mut style = metadata[1].to_owned();
+    if style.pop() != Some(':') {
+        return Err("Invalid style".to_owned());
+    }
+    let mut description = metadata[2].to_owned();
+    if description.pop() != Some(':') {
+        return Err("Invalid description".to_owned());
+    }
+    let mut difficulty = metadata[3].to_owned();
+    if difficulty.pop() != Some(':') {
+        return Err("Invalid difficulty".to_owned());
+    }
+    Ok(SMChart {
+        style,
+        description,
+        difficulty,
+        level,
+        notes_lines: notes.iter().map(|s| s.to_owned()).collect::<Vec<String>>(),
+    })
 }
 
 pub fn generate(
@@ -153,9 +183,6 @@ pub fn generate(
     to_style: Style,
     params: GeneratorParameters,
 ) -> Result<String, String> {
-    if from_style != to_style && contents.contains(to_style.sm_string()) {
-        return Err(format!("already contains {} charts", to_style.sm_string()));
-    }
     let mut ret = String::new();
     let mut search_from = 0;
     while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
@@ -166,7 +193,11 @@ pub fn generate(
             }
         };
         let notes_str = &contents[notes_idx..=semicolon_idx];
-        ret.push_str(&generate_chart(notes_str, from_style, to_style, params)?);
+        let chart = parse_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
+        if from_style != to_style && chart.style == to_style.sm_string() {
+            return Err(format!("already contains {} charts", to_style.sm_string()));
+        }
+        ret.push_str(&generate_chart(&chart, from_style, to_style, params)?);
         search_from = semicolon_idx + 1;
     }
 
