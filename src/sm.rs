@@ -55,6 +55,7 @@ fn generate_chart(
     from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
+    edit: bool,
 ) -> Result<String, String> {
     let mut ret = String::new();
 
@@ -87,11 +88,7 @@ fn generate_chart(
     ret.push_str(" - ");
     ret.push_str(&chart.description);
     ret.push_str(":\n     ");
-    ret.push_str(if to_style == from_style {
-        "Edit"
-    } else {
-        &chart.difficulty
-    });
+    ret.push_str(if edit { "Edit" } else { &chart.difficulty });
     ret.push_str(":\n     ");
     if let Some(ignore) = params.skip_difficulties_below {
         if chart.level < ignore {
@@ -182,6 +179,7 @@ pub fn generate(
     from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
+    edit: bool,
 ) -> Result<String, String> {
     let mut ret = String::new();
     let mut search_from = 0;
@@ -194,10 +192,10 @@ pub fn generate(
         };
         let notes_str = &contents[notes_idx..=semicolon_idx];
         let chart = parse_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
-        if from_style != to_style && !chart.is_autogen() && chart.style == to_style.sm_string() {
+        if !edit && chart.style == to_style.sm_string() && chart.difficulty != "Edit" {
             return Err(format!("already contains {} charts", to_style.sm_string()));
         }
-        ret.push_str(&generate_chart(&chart, from_style, to_style, params)?);
+        ret.push_str(&generate_chart(&chart, from_style, to_style, params, edit)?);
         search_from = semicolon_idx + 1;
     }
 
@@ -212,42 +210,47 @@ fn test_generate() {
     };
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Hard:\n     17:\n     :\n00000000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgSingles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgSingles, params, false);
+        assert!(g.is_err());
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(&orig, Style::ItgSingles, Style::ItgSingles, params, true);
         assert_eq!(g, Ok("#NOTES:\n     dance-single:\n     AYEAG[H] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n#NOTES:\n     dance-single:\n     AYEAG[C] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge;\n     17:\n     useless:\n0000\n;".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert!(g.is_err());
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-double:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n00000000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert!(g.is_err());
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     useless:\n00000000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
-        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()));
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
+        assert!(g.is_err());
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert!(g.is_err());
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000,0070;\n\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert!(g.is_err());
     }
     {
@@ -257,6 +260,7 @@ fn test_generate() {
             Style::ItgSingles,
             Style::ItgDoubles,
             GeneratorParameters::default(),
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG(F) - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -266,7 +270,7 @@ fn test_generate() {
             ..GeneratorParameters::default()
         };
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert_eq!(g.unwrap().matches('1').count(), 1);
     }
     {
@@ -275,12 +279,12 @@ fn test_generate() {
             ..params
         };
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     AYEAG...:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
-        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params);
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
     }
 }
