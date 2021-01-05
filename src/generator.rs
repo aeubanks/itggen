@@ -175,7 +175,7 @@ impl Generator {
 
     fn choose_from_probs(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
         let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
-        let prob_remaining = self.rand.gen_range(0.0, total_prob);
+        let prob_remaining = self.rand.gen_range(0.0..total_prob);
         Self::choose_from_probs_with_prob(col_probs, prob_remaining)
     }
 
@@ -260,7 +260,7 @@ impl Generator {
         };
 
         let dist = (x_dest - prev_coord.0).abs();
-        let steps_per_dist = rand.gen_range(8.0, 12.0);
+        let steps_per_dist = rand.gen_range(8.0..12.0);
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start: prev_coord,
