@@ -90,7 +90,7 @@ fn create_params(
         seed: None,
         disallow_footswitch,
         max_repeated: None,
-        repeated_decay: Some((1, 0.1)),
+        repeated_decay: Some((1, 0.03)),
         max_dist_between_feet: Some(2.9),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(2.9),
@@ -112,7 +112,7 @@ fn create_params(
         } else {
             None
         },
-        doubles_movement: Some((1.2, 0.1)),
+        doubles_movement: Some((1.2, 0.2)),
         disallow_foot_opposite_side: !crossovers,
         remove_jumps: crossovers,
         skip_difficulties_below,

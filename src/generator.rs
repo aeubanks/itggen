@@ -243,7 +243,7 @@ impl Generator {
     }
 
     fn rand_zone(rand: &mut StdRng, style: Style, prev_coord: Coord) -> Zone {
-        const DIST_FROM_EDGE: f32 = 0.5;
+        const DIST_FROM_EDGE: f32 = 0.7;
         let max = style.max_x_coord() - DIST_FROM_EDGE;
         if max <= DIST_FROM_EDGE {
             return Zone {
@@ -260,7 +260,7 @@ impl Generator {
         };
 
         let dist = (x_dest - prev_coord.0).abs();
-        let steps_per_dist = rand.gen_range(8.0..12.0);
+        let steps_per_dist = rand.gen_range(12.0..16.0);
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start: prev_coord,
@@ -532,7 +532,7 @@ impl Generator {
         if let Some((dist, decay)) = self.params.doubles_movement {
             let center = self.zone.center();
             let cur_coord = self.style.coord(col);
-            let over_dist = center.dist(cur_coord) - dist;
+            let over_dist = (center.0 - cur_coord.0).abs() - dist;
             if over_dist > 0.0 {
                 prob *= decay.powf(over_dist);
             }
