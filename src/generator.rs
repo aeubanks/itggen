@@ -448,7 +448,7 @@ impl Generator {
             if self.next_foot_status().last_col == Some(col) {
                 let over_repeated = self.next_foot_status().repeated - repeated;
                 if over_repeated > 0 {
-                    prob *= decay.powi(over_repeated);
+                    prob *= decay;
                 }
             }
         }
@@ -810,9 +810,9 @@ fn steps_prob() {
         gen.step(0);
         assert_eq!(gen.prob(3), 0.5);
         gen.step(3);
-        assert_eq!(gen.prob(0), 0.25);
+        assert_eq!(gen.prob(0), 0.5);
         gen.step(0);
-        assert_eq!(gen.prob(3), 0.25);
+        assert_eq!(gen.prob(3), 0.5);
     }
     // dist between feet decay
     {

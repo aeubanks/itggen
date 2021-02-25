@@ -90,7 +90,7 @@ fn create_params(
         seed: None,
         disallow_footswitch,
         max_repeated: None,
-        repeated_decay: Some((1, 0.03)),
+        repeated_decay: Some((1, 0.1)),
         max_dist_between_feet: Some(2.9),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(2.9),
