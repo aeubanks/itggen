@@ -29,7 +29,8 @@ pub struct GeneratorParameters {
     pub doubles_movement: Option<(f32, f32)>,
     pub disallow_foot_opposite_side: bool,
     pub remove_jumps: bool,
-    pub skip_difficulties_below: Option<i32>,
+    pub min_difficulty: Option<i32>,
+    pub max_difficulty: Option<i32>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]

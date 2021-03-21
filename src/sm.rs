@@ -90,8 +90,13 @@ fn generate_chart(
     ret.push_str(":\n     ");
     ret.push_str(if edit { "Edit" } else { &chart.difficulty });
     ret.push_str(":\n     ");
-    if let Some(ignore) = params.skip_difficulties_below {
+    if let Some(ignore) = params.min_difficulty {
         if chart.level < ignore {
+            return Ok("".to_owned());
+        }
+    }
+    if let Some(ignore) = params.max_difficulty {
+        if chart.level > ignore {
             return Ok("".to_owned());
         }
     }
@@ -275,12 +280,21 @@ fn test_generate() {
     }
     {
         let params = GeneratorParameters {
-            skip_difficulties_below: Some(10),
+            min_difficulty: Some(10),
             ..params
         };
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
         let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let params = GeneratorParameters {
+            max_difficulty: Some(9),
+            ..params
+        };
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(&orig, Style::ItgSingles, Style::ItgDoubles, params, false);
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     9:\n     useless:\n0000\n;\nB\n#NOTES:\n     dance-single:\n     AYEAG...:\n     Challenge:\n     10:\n     useless:\n0000\n;\n".to_owned();

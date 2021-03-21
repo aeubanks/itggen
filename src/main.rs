@@ -43,8 +43,11 @@ struct Opts {
     #[structopt(short, help = "Allow footswitches")]
     footswitches: bool,
 
-    #[structopt(short, help = "Skip difficulties below")]
-    skip_difficulties_below: Option<i32>,
+    #[structopt(long = "min", help = "Skip difficulties below")]
+    min_difficulty: Option<i32>,
+
+    #[structopt(long = "max", help = "Skip difficulties above")]
+    max_difficulty: Option<i32>,
 
     #[structopt(short, help = "Create autogen charts as edits")]
     edits: bool,
@@ -84,7 +87,8 @@ fn create_params(
     crossovers: bool,
     preserve_input_repetitions: bool,
     disallow_footswitch: bool,
-    skip_difficulties_below: Option<i32>,
+    min_difficulty: Option<i32>,
+    max_difficulty: Option<i32>,
 ) -> GeneratorParameters {
     GeneratorParameters {
         seed: None,
@@ -115,7 +119,8 @@ fn create_params(
         doubles_movement: Some((1.2, 0.2)),
         disallow_foot_opposite_side: !crossovers,
         remove_jumps: crossovers,
-        skip_difficulties_below,
+        min_difficulty,
+        max_difficulty,
     }
 }
 
@@ -126,7 +131,8 @@ fn main() -> std::io::Result<()> {
         opts.crossovers,
         opts.preserve_input_repetitions,
         !opts.footswitches,
-        opts.skip_difficulties_below,
+        opts.min_difficulty,
+        opts.max_difficulty,
     );
 
     let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();
