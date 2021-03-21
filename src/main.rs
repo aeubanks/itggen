@@ -37,8 +37,12 @@ struct Opts {
     #[structopt(short, help = "Preserve arrow jacks/changes from input chart")]
     preserve_input_repetitions: bool,
 
-    #[structopt(short, help = "Allow crossovers")]
-    crossovers: bool,
+    #[structopt(
+        short,
+        parse(from_occurrences),
+        help = "Allow crossovers (specify multiple times for harder crossovers)"
+    )]
+    crossovers: i32,
 
     #[structopt(short, help = "Allow footswitches")]
     footswitches: bool,
@@ -84,12 +88,13 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
 }
 
 fn create_params(
-    crossovers: bool,
+    crossovers: i32,
     preserve_input_repetitions: bool,
     disallow_footswitch: bool,
     min_difficulty: Option<i32>,
     max_difficulty: Option<i32>,
 ) -> GeneratorParameters {
+    let has_crossovers = crossovers != 0;
     GeneratorParameters {
         seed: None,
         disallow_footswitch,
@@ -99,26 +104,26 @@ fn create_params(
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(2.9),
         dist_between_steps_decay: Some((1.5, 0.3)),
-        max_horizontal_dist_between_steps: if crossovers { None } else { Some(1.0) },
+        max_horizontal_dist_between_steps: if has_crossovers { None } else { Some(1.0) },
         horizontal_dist_between_steps_decay: None,
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
         max_horizontal_dist_between_3_steps: None,
-        horizontal_dist_between_3_steps_decay: Some((1.0, if crossovers { 0.4 } else { 0.3 })),
-        max_angle: Some(if crossovers { PI * 3.0 / 4.0 } else { PI / 2.0 }),
+        horizontal_dist_between_3_steps_decay: Some((1.0, if has_crossovers { 0.4 } else { 0.3 })),
+        max_angle: Some(PI * (2 + crossovers) as f32 / 4.0),
         angle_decay: None,
         max_turn: None,
         turn_decay: None,
         max_bar_angle: None,
-        bar_angle_decay: Some((0.0, if crossovers { 0.4 } else { 0.1 })),
+        bar_angle_decay: Some((0.0, if has_crossovers { 0.4 } else { 0.1 })),
         preserve_input_repetitions: if preserve_input_repetitions {
-            Some(if crossovers { 0.001 } else { 0.0 })
+            Some(if has_crossovers { 0.001 } else { 0.0 })
         } else {
             None
         },
         doubles_movement: Some((1.2, 0.2)),
-        disallow_foot_opposite_side: !crossovers,
-        remove_jumps: crossovers,
+        disallow_foot_opposite_side: !has_crossovers,
+        remove_jumps: has_crossovers,
         min_difficulty,
         max_difficulty,
     }
@@ -134,6 +139,8 @@ fn main() -> std::io::Result<()> {
         opts.min_difficulty,
         opts.max_difficulty,
     );
+
+    println!("params: {:?}", params);
 
     let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();
 

@@ -3,7 +3,7 @@ use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct GeneratorParameters {
     pub seed: Option<u64>,
     pub disallow_footswitch: bool,
