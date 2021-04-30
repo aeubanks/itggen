@@ -9,6 +9,7 @@ pub struct GeneratorParameters {
     pub disallow_footswitch: bool,
     pub max_repeated: Option<i32>,
     pub repeated_decay: Option<(i32, f32)>,
+    pub other_foot_repeat_decay: Option<f32>,
     pub max_dist_between_feet: Option<f32>,
     pub dist_between_feet_decay: Option<(f32, f32)>,
     pub max_dist_between_steps: Option<f32>,
@@ -453,6 +454,12 @@ impl Generator {
                 }
             }
         }
+        if let Some(decay) = self.params.other_foot_repeat_decay {
+            if self.prev_foot_status().repeated > 1 && self.next_foot_status().last_col == Some(col)
+            {
+                prob *= decay;
+            }
+        }
         if let Some((dist, decay)) = self.params.dist_between_feet_decay {
             if let Some(prev_col) = self.prev_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
@@ -814,6 +821,43 @@ fn steps_prob() {
         assert_eq!(gen.prob(0), 0.5);
         gen.step(0);
         assert_eq!(gen.prob(3), 0.5);
+    }
+    // other foot repeated decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.other_foot_repeat_decay = Some(0.5);
+        let mut gen = Generator::new(Style::ItgSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(0);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        gen.step(3);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        gen.step(0);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 0.5);
+        gen.step(3);
+        assert_eq!(gen.prob(0), 0.5);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        gen.step(0);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 0.5);
+        gen.step(2);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
     }
     // dist between feet decay
     {

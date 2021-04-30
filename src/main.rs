@@ -99,7 +99,8 @@ fn create_params(
         seed: None,
         disallow_footswitch,
         max_repeated: None,
-        repeated_decay: Some((1, 0.1)),
+        repeated_decay: Some((1, 0.2)),
+        other_foot_repeat_decay: Some(0.3),
         max_dist_between_feet: Some(2.9),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(2.9),
@@ -115,7 +116,7 @@ fn create_params(
         max_turn: None,
         turn_decay: None,
         max_bar_angle: None,
-        bar_angle_decay: Some((0.0, if has_crossovers { 0.4 } else { 0.1 })),
+        bar_angle_decay: Some((0.0, if has_crossovers { 0.4 } else { 0.2 })),
         preserve_input_repetitions: if preserve_input_repetitions {
             Some(if has_crossovers { 0.001 } else { 0.0 })
         } else {
