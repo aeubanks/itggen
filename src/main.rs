@@ -109,7 +109,12 @@ fn create_params(
         horizontal_dist_between_steps_decay: None,
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
-        max_horizontal_dist_between_3_steps: None,
+        max_horizontal_dist_between_3_steps_same_foot: None,
+        max_horizontal_dist_between_4_steps_both_feet: if has_crossovers {
+            None
+        } else {
+            Some(2.5)
+        },
         horizontal_dist_between_3_steps_decay: Some((1.0, if has_crossovers { 0.4 } else { 0.3 })),
         max_angle: Some(PI * (2 + crossovers) as f32 / 4.0),
         angle_decay: None,

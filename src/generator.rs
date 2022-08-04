@@ -18,7 +18,8 @@ pub struct GeneratorParameters {
     pub horizontal_dist_between_steps_decay: Option<(f32, f32)>,
     pub max_vertical_dist_between_steps: Option<f32>,
     pub vertical_dist_between_steps_decay: Option<(f32, f32)>,
-    pub max_horizontal_dist_between_3_steps: Option<f32>,
+    pub max_horizontal_dist_between_3_steps_same_foot: Option<f32>,
+    pub max_horizontal_dist_between_4_steps_both_feet: Option<f32>,
     pub horizontal_dist_between_3_steps_decay: Option<(f32, f32)>,
     pub max_angle: Option<f32>,
     pub angle_decay: Option<(f32, f32)>,
@@ -390,8 +391,17 @@ impl Generator {
                 }
             }
         }
-        if let Some(md) = self.params.max_horizontal_dist_between_3_steps {
+        if let Some(md) = self.params.max_horizontal_dist_between_3_steps_same_foot {
             if let Some(prev_col) = self.next_foot_status().last_last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
+                    return false;
+                }
+            }
+        }
+        if let Some(md) = self.params.max_horizontal_dist_between_4_steps_both_feet {
+            if let Some(prev_col) = self.prev_foot_status().last_last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
                 if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
@@ -730,7 +740,7 @@ fn valid_steps() {
     // max horizontal dist same foot 3 steps
     {
         let mut params = GeneratorParameters::default();
-        params.max_horizontal_dist_between_3_steps = Some(1.5);
+        params.max_horizontal_dist_between_3_steps_same_foot = Some(1.5);
         let mut gen = Generator::new(Style::HorizonSingles, params);
         gen.next_foot = Foot::Left;
         gen.step(2);
@@ -745,6 +755,20 @@ fn valid_steps() {
         gen.step(5);
         gen.step(8);
         assert_eq!(gen.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
+    }
+    // max horizontal dist both foot 4 steps
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_horizontal_dist_between_4_steps_both_feet = Some(2.5);
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(0);
+        gen.step(3);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7]);
+        gen.step(1);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
+        gen.step(3);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6]);
     }
     // max angle
     {
