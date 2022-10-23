@@ -56,6 +56,13 @@ struct Opts {
     #[structopt(short, help = "Create autogen charts as edits")]
     edits: bool,
 
+    #[structopt(
+        short = "x",
+        default_value = "",
+        help = "Extra string to add to description"
+    )]
+    extra_description: String,
+
     #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
 }
@@ -177,7 +184,14 @@ fn main() -> std::io::Result<()> {
         let mut generated = String::new();
         for to_style in &opts.to_style {
             println!("  {:?} -> {:?}", opts.from_style, to_style);
-            match sm::generate(&contents, opts.from_style, *to_style, params, opts.edits) {
+            match sm::generate(
+                &contents,
+                opts.from_style,
+                *to_style,
+                params,
+                opts.edits,
+                &opts.extra_description,
+            ) {
                 Ok(s) => {
                     generated.push('\n');
                     generated.push_str(&s);
