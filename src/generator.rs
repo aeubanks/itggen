@@ -246,9 +246,13 @@ impl Generator {
     }
 
     fn rand_zone(rand: &mut StdRng, style: Style, prev_coord: Coord) -> Zone {
-        const DIST_FROM_EDGE: f32 = 0.7;
-        let max = style.max_x_coord() - DIST_FROM_EDGE;
-        if max <= DIST_FROM_EDGE {
+        let dist_from_edge = if style == Style::PumpDoubles || style == Style::PumpTriples {
+            0.2
+        } else {
+            0.7
+        };
+        let max = style.max_x_coord() - dist_from_edge;
+        if max <= dist_from_edge {
             return Zone {
                 start: prev_coord,
                 end: Coord(style.center_x(), 1.0),
@@ -259,7 +263,7 @@ impl Generator {
         let x_dest = if prev_coord.0 < style.center_x() {
             max
         } else {
-            DIST_FROM_EDGE
+            dist_from_edge
         };
 
         let dist = (x_dest - prev_coord.0).abs();
