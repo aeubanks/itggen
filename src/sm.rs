@@ -123,7 +123,9 @@ fn generate_chart(
             let row = (0..(to_style.num_cols()))
                 .map(|c| if out_cols.contains(&c) { '1' } else { '0' })
                 .collect::<String>();
+            ret.push_str(&"0".repeat(to_style.extra_0s()));
             ret.push_str(&row);
+            ret.push_str(&"0".repeat(to_style.extra_0s()));
             ret.push('\n');
         } else if l == "," || l == ";" {
             ret.push_str(l);
@@ -376,6 +378,36 @@ fn test_generate() {
             "",
         );
         assert_eq!(g.unwrap().matches('1').count(), 1);
+    }
+    {
+        let params = GeneratorParameters::default();
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::PumpHalfDoubles,
+            params,
+            false,
+            "",
+        );
+        let res = g.unwrap();
+        assert!(res.contains("0000110000"));
+        assert!(res.contains("pump-double"));
+    }
+    {
+        let params = GeneratorParameters::default();
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::PumpMiddleFour,
+            params,
+            false,
+            "",
+        );
+        let res = g.unwrap();
+        assert!(res.contains("0000110000"));
+        assert!(res.contains("pump-double"));
     }
     {
         let params = GeneratorParameters {

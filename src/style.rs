@@ -10,6 +10,8 @@ pub enum Style {
     PumpSingles,
     PumpDoubles,
     PumpTriples,
+    PumpHalfDoubles,
+    PumpMiddleFour,
     HorizonSingles,
     HorizonDoubles,
     HorizonTriples,
@@ -29,6 +31,8 @@ impl FromStr for Style {
             "pump-singles" => Ok(Style::PumpSingles),
             "pump-doubles" => Ok(Style::PumpDoubles),
             "pump-triples" => Ok(Style::PumpTriples),
+            "pump-halfdoubles" => Ok(Style::PumpHalfDoubles),
+            "pump-middlefour" => Ok(Style::PumpMiddleFour),
             "horizon-singles" => Ok(Style::HorizonSingles),
             "horizon-doubles" => Ok(Style::HorizonDoubles),
             "horizon-triples" => Ok(Style::HorizonTriples),
@@ -52,9 +56,19 @@ impl Style {
             Style::PumpSingles => 5,
             Style::PumpDoubles => 10,
             Style::PumpTriples => 15,
+            Style::PumpHalfDoubles => 6,
+            Style::PumpMiddleFour => 4,
             Style::HorizonSingles => 9,
             Style::HorizonDoubles => 18,
             Style::HorizonTriples => 27,
+        }
+    }
+
+    pub fn extra_0s(&self) -> usize {
+        match self {
+            Style::PumpHalfDoubles => 2,
+            Style::PumpMiddleFour => 3,
+            _ => 0,
         }
     }
 
@@ -64,7 +78,7 @@ impl Style {
             Style::ItgDoubles => "dance-double",
             Style::ItgTriples => "dance-triple",
             Style::PumpSingles => "pump-single",
-            Style::PumpDoubles => "pump-double",
+            Style::PumpDoubles | Style::PumpHalfDoubles | Style::PumpMiddleFour => "pump-double",
             Style::PumpTriples => "pump-triple",
             Style::HorizonSingles => "horizon-single",
             Style::HorizonDoubles => "horizon-double",
@@ -98,6 +112,14 @@ impl Style {
                 Foot::Left => 5,
                 Foot::Right => 9,
             },
+            Style::PumpHalfDoubles => match foot {
+                Foot::Left => 2,
+                Foot::Right => 3,
+            },
+            Style::PumpMiddleFour => match foot {
+                Foot::Left => 1,
+                Foot::Right => 2,
+            },
             Style::HorizonSingles => match foot {
                 Foot::Left => 1,
                 Foot::Right => 7,
@@ -122,6 +144,8 @@ impl Style {
             Style::ItgSingles | Style::PumpSingles | Style::HorizonSingles => 2.0,
             Style::ItgDoubles | Style::PumpDoubles | Style::HorizonDoubles => 5.0,
             Style::ItgTriples | Style::PumpTriples | Style::HorizonTriples => 8.0,
+            Style::PumpHalfDoubles => 3.0,
+            Style::PumpMiddleFour => 1.0,
         }
     }
 
@@ -205,6 +229,22 @@ impl Style {
                 12 => Coord(7.0, 1.0),
                 13 => Coord(8.0, 2.0),
                 14 => Coord(8.0, 0.0),
+                _ => panic!(),
+            },
+            Style::PumpHalfDoubles => match col {
+                0 => Coord(0.0, 1.0),
+                1 => Coord(1.0, 2.0),
+                2 => Coord(1.0, 0.0),
+                3 => Coord(2.0, 0.0),
+                4 => Coord(2.0, 2.0),
+                5 => Coord(3.0, 1.0),
+                _ => panic!(),
+            },
+            Style::PumpMiddleFour => match col {
+                0 => Coord(0.0, 1.0),
+                1 => Coord(0.0, 0.0),
+                2 => Coord(1.0, 0.0),
+                3 => Coord(1.0, 1.0),
                 _ => panic!(),
             },
             Style::HorizonSingles => match col {
