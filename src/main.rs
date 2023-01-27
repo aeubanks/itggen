@@ -116,10 +116,10 @@ fn create_params(
         horizontal_dist_between_steps_decay: None,
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
-        max_horizontal_dist_between_3_steps_same_foot: if has_crossovers {
+        horizontal_dist_between_3_steps_same_foot_decay: if has_crossovers {
             None
         } else {
-            Some(1.5)
+            Some((1.5, 0.001))
         },
         max_horizontal_dist_between_4_steps_both_feet: if has_crossovers {
             None

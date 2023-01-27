@@ -18,7 +18,7 @@ pub struct GeneratorParameters {
     pub horizontal_dist_between_steps_decay: Option<(f32, f32)>,
     pub max_vertical_dist_between_steps: Option<f32>,
     pub vertical_dist_between_steps_decay: Option<(f32, f32)>,
-    pub max_horizontal_dist_between_3_steps_same_foot: Option<f32>,
+    pub horizontal_dist_between_3_steps_same_foot_decay: Option<(f32, f32)>,
     pub max_horizontal_dist_between_4_steps_both_feet: Option<f32>,
     pub horizontal_dist_between_3_steps_decay: Option<(f32, f32)>,
     pub max_angle: Option<f32>,
@@ -395,15 +395,6 @@ impl Generator {
                 }
             }
         }
-        if let Some(md) = self.params.max_horizontal_dist_between_3_steps_same_foot {
-            if let Some(prev_col) = self.next_foot_status().last_last_col {
-                let prev_coord = self.style.coord(prev_col);
-                let cur_coord = self.style.coord(col);
-                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
-                    return false;
-                }
-            }
-        }
         if let Some(md) = self.params.max_horizontal_dist_between_4_steps_both_feet {
             if let Some(prev_col) = self.prev_foot_status().last_last_col {
                 let prev_coord = self.style.coord(prev_col);
@@ -513,6 +504,16 @@ impl Generator {
         if let Some((dist, decay)) = self.params.horizontal_dist_between_3_steps_decay {
             if let Some(prev_col) = self.next_foot_status().last_last_col {
                 let prev_coord = self.style.coord(prev_col);
+                let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
+                if over_dist > 0.0 {
+                    prob *= decay.powf(over_dist);
+                }
+            }
+        }
+        if let Some((dist, decay)) = self.params.horizontal_dist_between_3_steps_same_foot_decay {
+            if let Some(prev_col) = self.next_foot_status().last_last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
                 let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
                 if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
@@ -741,25 +742,6 @@ fn valid_steps() {
         gen.step(7);
         assert_eq!(gen.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
     }
-    // max horizontal dist same foot 3 steps
-    {
-        let mut params = GeneratorParameters::default();
-        params.max_horizontal_dist_between_3_steps_same_foot = Some(1.5);
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(2);
-        gen.step(8);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
-        gen.step(5);
-        gen.step(8);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
-        gen.step(6);
-        gen.step(8);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
-        gen.step(5);
-        gen.step(8);
-        assert_eq!(gen.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
-    }
     // max horizontal dist both foot 4 steps
     {
         let mut params = GeneratorParameters::default();
@@ -953,6 +935,57 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.horizontal_dist_between_3_steps_decay = Some((1.0, 0.5));
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(2);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
+        gen.step(5);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 0.5);
+        assert_eq!(gen.prob(7), 0.5);
+        assert_eq!(gen.prob(8), 0.5);
+        gen.step(6);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(1), 1.0);
+        assert_eq!(gen.prob(2), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
+        gen.step(5);
+        gen.step(8);
+        assert_eq!(gen.prob(0), 0.5);
+        assert_eq!(gen.prob(1), 0.5);
+        assert_eq!(gen.prob(2), 0.5);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(4), 1.0);
+        assert_eq!(gen.prob(5), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(7), 1.0);
+        assert_eq!(gen.prob(8), 1.0);
+    }
+    // horizontal dist same foot 3 steps
+    {
+        let mut params = GeneratorParameters::default();
+        params.horizontal_dist_between_3_steps_same_foot_decay = Some((1.0, 0.5));
         let mut gen = Generator::new(Style::HorizonSingles, params);
         gen.next_foot = Foot::Left;
         gen.step(2);
