@@ -106,7 +106,7 @@ fn create_params(
         other_foot_repeat_decay: Some(0.3),
         max_dist_between_feet: Some(2.9),
         dist_between_feet_decay: None,
-        max_dist_between_steps: Some(2.9),
+        max_dist_between_steps: Some(if has_crossovers { 2.9 } else { 2.1 }),
         dist_between_steps_decay: Some((1.5, 0.3)),
         max_horizontal_dist_between_steps: if has_crossovers { None } else { Some(1.0) },
         horizontal_dist_between_steps_decay: None,
