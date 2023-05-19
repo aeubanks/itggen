@@ -59,7 +59,7 @@ fn generate_chart(
     to_style: Style,
     params: GeneratorParameters,
     edit: bool,
-    extra_description: &str,
+    extra_description: Option<&String>,
 ) -> Result<String, String> {
     let mut ret = String::new();
 
@@ -89,7 +89,7 @@ fn generate_chart(
             ret.push(']');
         }
     }
-    if !extra_description.is_empty() {
+    if let Some(extra_description) = extra_description {
         ret.push_str(" - ");
         ret.push_str(extra_description);
     }
@@ -195,7 +195,7 @@ pub fn generate(
     to_style: Style,
     params: GeneratorParameters,
     edit: bool,
-    extra_description: &str,
+    extra_description: Option<&String>,
 ) -> Result<String, String> {
     let mut ret = String::new();
     let mut search_from = 0;
@@ -239,7 +239,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -251,7 +251,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "foo",
+            Some(&"foo".to_owned()),
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - foo - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -263,7 +263,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Hard:\n     17:\n     :\n00000000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -275,7 +275,7 @@ fn test_generate() {
             Style::ItgSingles,
             params,
             false,
-            "",
+            None,
         );
         assert!(g.is_err());
     }
@@ -287,7 +287,7 @@ fn test_generate() {
             Style::ItgSingles,
             params,
             true,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-single:\n     AYEAG[H] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n#NOTES:\n     dance-single:\n     AYEAG[C] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n".to_owned()))
     }
@@ -299,7 +299,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert!(g.is_err());
     }
@@ -311,7 +311,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert!(g.is_err());
     }
@@ -323,7 +323,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert!(g.is_err());
     }
@@ -335,7 +335,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert!(g.is_err());
     }
@@ -347,7 +347,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert!(g.is_err());
     }
@@ -359,7 +359,7 @@ fn test_generate() {
             Style::ItgDoubles,
             GeneratorParameters::default(),
             false,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG(F) - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -375,7 +375,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert_eq!(g.unwrap().matches('1').count(), 1);
     }
@@ -388,7 +388,7 @@ fn test_generate() {
             Style::PumpHalfDoubles,
             params,
             false,
-            "",
+            None,
         );
         let res = g.unwrap();
         assert!(res.contains("0000110000"));
@@ -403,7 +403,7 @@ fn test_generate() {
             Style::PumpMiddleFour,
             params,
             false,
-            "",
+            None,
         );
         let res = g.unwrap();
         assert!(res.contains("0000110000"));
@@ -421,7 +421,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -437,7 +437,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -449,7 +449,7 @@ fn test_generate() {
             Style::ItgDoubles,
             params,
             false,
-            "",
+            None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
     }

@@ -56,12 +56,8 @@ struct Opts {
     #[structopt(short, help = "Create autogen charts as edits")]
     edits: bool,
 
-    #[structopt(
-        short = "x",
-        default_value = "",
-        help = "Extra string to add to description"
-    )]
-    extra_description: String,
+    #[structopt(short = "x", help = "Extra string to add to description")]
+    extra_description: Option<String>,
 
     #[structopt(short, help = "Dry run (don't actually write to disk)")]
     dry_run: bool,
@@ -194,7 +190,7 @@ fn main() -> std::io::Result<()> {
                 *to_style,
                 params,
                 opts.edits,
-                &opts.extra_description,
+                opts.extra_description.as_ref(),
             ) {
                 Ok(s) => {
                     generated.push('\n');
