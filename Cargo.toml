@@ -3,6 +3,12 @@ name = "itggen"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+debug = 1
+panic = "abort"
+codegen-units = 1
+lto = "thin"
+
 [dependencies]
 approx = "*"
 rand = "*"
