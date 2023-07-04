@@ -2,6 +2,7 @@ use crate::coord::Coord;
 use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
+use std::f32::consts::PI;
 
 #[derive(Copy, Clone, Default, Debug)]
 pub struct GeneratorParameters {
@@ -12,10 +13,12 @@ pub struct GeneratorParameters {
     pub other_foot_repeat_decay: Option<f32>,
     pub max_dist_between_feet: Option<f32>,
     pub dist_between_feet_decay: Option<(f32, f32)>,
+    pub max_dist_between_feet_if_crossover: Option<f32>,
     pub max_dist_between_steps: Option<f32>,
     pub dist_between_steps_decay: Option<(f32, f32)>,
     pub max_horizontal_dist_between_steps: Option<f32>,
     pub horizontal_dist_between_steps_decay: Option<(f32, f32)>,
+    pub max_horizontal_dist_between_steps_if_crossover: Option<f32>,
     pub max_vertical_dist_between_steps: Option<f32>,
     pub vertical_dist_between_steps_decay: Option<(f32, f32)>,
     pub horizontal_dist_between_3_steps_same_foot_decay: Option<(f32, f32)>,
@@ -25,6 +28,7 @@ pub struct GeneratorParameters {
     pub angle_decay: Option<(f32, f32)>,
     pub max_turn: Option<f32>,
     pub turn_decay: Option<(f32, f32)>,
+    pub crossover_multiplier: Option<f32>,
     pub max_bar_angle: Option<f32>,
     pub bar_angle_decay: Option<(f32, f32)>,
     pub preserve_input_repetitions: Option<f32>,
@@ -325,8 +329,15 @@ impl Generator {
         Some(l.angle(r, self.prev_angle))
     }
 
+    fn test_crossover(&self, col: i8) -> bool {
+        if let Some(a) = self.test_angle(col) {
+            a.abs() > PI / 2.0 + Self::EPSILON
+        } else {
+            false
+        }
+    }
+
     fn test_bar_angle(&self, col: i8) -> Option<f32> {
-        use std::f32::consts::PI;
         let (lc, rc) = match self.next_foot {
             Foot::Left => (col, self.feet_status[Foot::Right as usize].last_col?),
             Foot::Right => (self.feet_status[Foot::Left as usize].last_col?, col),
@@ -368,6 +379,17 @@ impl Generator {
                 }
             }
         }
+        if let Some(md) = self.params.max_dist_between_feet_if_crossover {
+            if let Some(prev_col) = self.prev_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if prev_coord.dist(cur_coord) > md + Self::EPSILON {
+                    if self.test_crossover(col) {
+                        return false;
+                    }
+                }
+            }
+        }
         if let Some(md) = self.params.max_dist_between_steps {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
@@ -383,6 +405,17 @@ impl Generator {
                 let cur_coord = self.style.coord(col);
                 if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
                     return false;
+                }
+            }
+        }
+        if let Some(md) = self.params.max_horizontal_dist_between_steps_if_crossover {
+            if let Some(prev_col) = self.next_foot_status().last_col {
+                let prev_coord = self.style.coord(prev_col);
+                let cur_coord = self.style.coord(col);
+                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
+                    if self.test_crossover(col) {
+                        return false;
+                    }
                 }
             }
         }
@@ -534,6 +567,11 @@ impl Generator {
                 if over_angle > 0.0 {
                     prob *= decay.powf(over_angle);
                 }
+            }
+        }
+        if let Some(cm) = self.params.crossover_multiplier {
+            if self.test_crossover(col) {
+                prob *= cm;
             }
         }
         if let Some((angle, decay)) = self.params.bar_angle_decay {
@@ -710,6 +748,18 @@ fn valid_steps() {
         gen.step(7);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
     }
+    // max dist two feet if crossover
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_dist_between_feet_if_crossover = Some(1.9);
+        let mut gen = Generator::new(Style::ItgDoubles, params);
+        gen.next_foot = Foot::Right;
+        gen.step(4);
+        gen.step(3);
+        assert_eq!(gen.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
+        gen.step(5);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7]);
+    }
     // max dist steps
     {
         let mut params = GeneratorParameters::default();
@@ -722,7 +772,7 @@ fn valid_steps() {
         gen.step(0);
         assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
     }
-    // horizontal dist between steps decay
+    // max horizontal dist between steps
     {
         let mut params = GeneratorParameters::default();
         params.max_horizontal_dist_between_steps = Some(1.0);
@@ -731,6 +781,18 @@ fn valid_steps() {
         gen.step(1);
         gen.step(7);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
+    }
+    // max horizontal dist between steps if crossover
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_horizontal_dist_between_steps_if_crossover = Some(1.5);
+        let mut gen = Generator::new(Style::HorizonSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(7);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        gen.step(4);
+        assert_eq!(gen.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
     }
     // max vertical dist steps
     {
@@ -1088,6 +1150,19 @@ fn steps_prob() {
             assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
             assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.0));
         }
+    }
+    // crossover multiplier
+    {
+        let mut params = GeneratorParameters::default();
+        params.crossover_multiplier = Some(2.0);
+        let mut gen = Generator::new(Style::ItgSingles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(1);
+        assert_relative_eq!(gen.prob(0), 1.0);
+        assert_relative_eq!(gen.prob(1), 1.0);
+        assert_relative_eq!(gen.prob(2), 1.0);
+        assert_relative_eq!(gen.prob(3), 2.0);
     }
     // bar angle decay
     {

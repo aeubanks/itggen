@@ -44,6 +44,12 @@ struct Opts {
     )]
     crossovers: i32,
 
+    #[structopt(
+        long = "more-easy-crossovers",
+        help = "Generate more but easier crossovers"
+    )]
+    more_easy_crossovers: bool,
+
     #[structopt(short, help = "Allow footswitches")]
     footswitches: bool,
 
@@ -92,6 +98,7 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
 
 fn create_params(
     crossovers: i32,
+    more_easy_crossovers: bool,
     preserve_input_repetitions: bool,
     disallow_footswitch: bool,
     min_difficulty: Option<i32>,
@@ -105,11 +112,17 @@ fn create_params(
         repeated_decay: Some((1, 0.2)),
         other_foot_repeat_decay: Some(0.3),
         max_dist_between_feet: Some(2.9),
+        max_dist_between_feet_if_crossover: Some(2.5),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(if has_crossovers { 2.9 } else { 2.1 }),
         dist_between_steps_decay: Some((1.5, 0.3)),
         max_horizontal_dist_between_steps: if has_crossovers { None } else { Some(1.0) },
         horizontal_dist_between_steps_decay: None,
+        max_horizontal_dist_between_steps_if_crossover: if more_easy_crossovers {
+            Some(1.9)
+        } else {
+            None
+        },
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
         horizontal_dist_between_3_steps_same_foot_decay: if has_crossovers {
@@ -127,6 +140,11 @@ fn create_params(
         angle_decay: None,
         max_turn: Some(if crossovers > 1 { PI } else { PI * 3.0 / 4.0 }),
         turn_decay: None,
+        crossover_multiplier: if more_easy_crossovers {
+            Some(2.0)
+        } else {
+            None
+        },
         max_bar_angle: None,
         bar_angle_decay: Some((0.0, if has_crossovers { 0.4 } else { 0.2 })),
         preserve_input_repetitions: if preserve_input_repetitions {
@@ -147,6 +165,7 @@ fn main() -> std::io::Result<()> {
 
     let params = create_params(
         opts.crossovers,
+        opts.more_easy_crossovers,
         opts.preserve_input_repetitions,
         !opts.footswitches,
         opts.min_difficulty,
