@@ -93,8 +93,10 @@ fn generate_chart(
         ret.push_str(" - ");
         ret.push_str(extra_description);
     }
-    ret.push_str(" - ");
-    ret.push_str(&chart.description);
+    if !chart.description.is_empty() {
+        ret.push_str(" - ");
+        ret.push_str(&chart.description);
+    }
     ret.push_str(":\n     ");
     ret.push_str(if edit { "Edit" } else { &chart.difficulty });
     ret.push_str(":\n     ");
@@ -242,6 +244,18 @@ fn test_generate() {
             None,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     :\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+        );
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
