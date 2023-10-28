@@ -33,6 +33,8 @@ pub struct GeneratorParameters {
     pub bar_angle_decay: Option<(f32, f32)>,
     pub preserve_input_repetitions: Option<f32>,
     pub doubles_movement: Option<(f32, f32)>,
+    pub doubles_dist_from_side: Option<f32>,
+    pub doubles_steps_per_dist: Option<f32>,
     pub disallow_foot_opposite_side: bool,
     pub remove_jumps: bool,
     pub min_difficulty: Option<i32>,
@@ -114,7 +116,13 @@ impl Generator {
             .map(|s| StdRng::seed_from_u64(s))
             .unwrap_or_else(|| StdRng::from_entropy());
         let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
-        let zone = Self::rand_zone(&mut rand, style, style.init_pos());
+        let zone = Self::rand_zone(
+            &mut rand,
+            style,
+            style.init_pos(),
+            params.doubles_dist_from_side,
+            params.doubles_steps_per_dist,
+        );
         Self {
             style,
             params,
@@ -246,15 +254,29 @@ impl Generator {
     }
 
     fn next_zone(&mut self) -> Zone {
-        Self::rand_zone(&mut self.rand, self.style, self.zone.end)
+        Self::rand_zone(
+            &mut self.rand,
+            self.style,
+            self.zone.end,
+            self.params.doubles_dist_from_side,
+            self.params.doubles_steps_per_dist,
+        )
     }
 
-    fn rand_zone(rand: &mut StdRng, style: Style, prev_coord: Coord) -> Zone {
-        let dist_from_edge = if style == Style::PumpDoubles || style == Style::PumpTriples {
-            0.2
-        } else {
-            0.7
-        };
+    fn rand_zone(
+        rand: &mut StdRng,
+        style: Style,
+        prev_coord: Coord,
+        override_dist_from_edge: Option<f32>,
+        override_steps_per_dist: Option<f32>,
+    ) -> Zone {
+        let dist_from_edge = override_dist_from_edge.unwrap_or_else(|| {
+            if style == Style::PumpDoubles || style == Style::PumpTriples {
+                0.0
+            } else {
+                0.7
+            }
+        });
         let max = style.max_x_coord() - dist_from_edge;
         if max <= dist_from_edge {
             return Zone {
@@ -271,7 +293,7 @@ impl Generator {
         };
 
         let dist = (x_dest - prev_coord.0).abs();
-        let steps_per_dist = rand.gen_range(12.0..16.0);
+        let steps_per_dist = override_steps_per_dist.unwrap_or_else(|| rand.gen_range(12.0..16.0));
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start: prev_coord,
@@ -287,13 +309,13 @@ fn test_rand_zone() {
     let mut rand = StdRng::from_entropy();
     let style = Style::ItgDoubles;
     assert!(
-        Generator::rand_zone(&mut rand, style, Coord(4.0, 1.0))
+        Generator::rand_zone(&mut rand, style, Coord(4.0, 1.0), None, None)
             .end
             .0
             <= style.center_x()
     );
     assert!(
-        Generator::rand_zone(&mut rand, style, Coord(2.0, 1.0))
+        Generator::rand_zone(&mut rand, style, Coord(2.0, 1.0), None, None)
             .end
             .0
             >= style.center_x()

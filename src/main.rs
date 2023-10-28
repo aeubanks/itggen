@@ -50,6 +50,9 @@ struct Opts {
     )]
     more_easy_crossovers: bool,
 
+    #[structopt(long = "vroom", help = "Move more on doubles")]
+    vroom: bool,
+
     #[structopt(short, help = "Allow footswitches")]
     footswitches: bool,
 
@@ -99,6 +102,7 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
 fn create_params(
     crossovers: i32,
     more_easy_crossovers: bool,
+    vroom: bool,
     preserve_input_repetitions: bool,
     disallow_footswitch: bool,
     min_difficulty: Option<i32>,
@@ -125,17 +129,16 @@ fn create_params(
         },
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
-        horizontal_dist_between_3_steps_same_foot_decay: if has_crossovers {
-            None
-        } else {
-            Some((1.5, 0.001))
-        },
+        horizontal_dist_between_3_steps_same_foot_decay: if has_crossovers { None } else { None },
         max_horizontal_dist_between_4_steps_both_feet: if has_crossovers {
             None
         } else {
             Some(2.5)
         },
-        horizontal_dist_between_3_steps_decay: Some((1.0, if has_crossovers { 0.4 } else { 0.3 })),
+        horizontal_dist_between_3_steps_decay: Some((
+            1.0,
+            if has_crossovers || vroom { 0.4 } else { 0.3 },
+        )),
         max_angle: Some(PI * (2 + crossovers) as f32 / 4.0),
         angle_decay: None,
         max_turn: Some(if crossovers > 1 { PI } else { PI * 3.0 / 4.0 }),
@@ -152,7 +155,9 @@ fn create_params(
         } else {
             None
         },
-        doubles_movement: Some((1.2, 0.2)),
+        doubles_movement: Some((1.2, 0.02)),
+        doubles_dist_from_side: if vroom { Some(0.0) } else { None },
+        doubles_steps_per_dist: if vroom { Some(4.0) } else { None },
         disallow_foot_opposite_side: !has_crossovers,
         remove_jumps: has_crossovers,
         min_difficulty,
@@ -166,6 +171,7 @@ fn main() -> std::io::Result<()> {
     let params = create_params(
         opts.crossovers,
         opts.more_easy_crossovers,
+        opts.vroom,
         opts.preserve_input_repetitions,
         !opts.footswitches,
         opts.min_difficulty,
