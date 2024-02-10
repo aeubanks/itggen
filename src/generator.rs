@@ -34,6 +34,7 @@ pub struct GeneratorParameters {
     pub doubles_movement: Option<(f32, f32)>,
     pub doubles_dist_from_side: Option<f32>,
     pub doubles_steps_per_dist: Option<f32>,
+    pub doubles_track_individual_feet: bool,
     pub disallow_foot_opposite_side: bool,
     pub remove_jumps: bool,
     pub min_difficulty: Option<i32>,
@@ -273,11 +274,12 @@ impl Generator {
             if style == Style::PumpDoubles || style == Style::PumpTriples {
                 0.0
             } else {
-                0.7
+                0.5
             }
         });
         let max = style.max_x_coord() - dist_from_edge;
-        if max <= dist_from_edge {
+        if dist_from_edge >= max {
+            // if interval is empty or trivial, default to center
             return Zone {
                 start_x: prev_x,
                 end_x: style.center_x(),
@@ -602,7 +604,15 @@ impl Generator {
             }
         }
         if let Some((dist, decay)) = self.params.doubles_movement {
-            let zone_x = self.zone.current_x();
+            let zone_x = self.zone.current_x()
+                + if self.params.doubles_track_individual_feet {
+                    match self.next_foot {
+                        Foot::Left => -0.5,
+                        Foot::Right => 0.5,
+                    }
+                } else {
+                    0.0
+                };
             let cur_coord = self.style.coord(col);
             let over_dist = (zone_x - cur_coord.0).abs() - dist;
             if over_dist > 0.0 {
@@ -1227,6 +1237,36 @@ fn steps_prob() {
         assert_eq!(gen.prob(5), 1.0);
         assert_eq!(gen.prob(7), 1.0);
         assert_eq!(gen.prob(10), 0.5);
+    }
+    // doubles movement distance decay
+    {
+        let mut params = GeneratorParameters::default();
+        params.doubles_movement = Some((1.0, 0.5));
+        params.doubles_track_individual_feet = true;
+        let mut gen = Generator::new(Style::HorizonDoubles, params);
+        gen.next_foot = Foot::Left;
+        gen.step(1);
+        gen.step(7);
+        gen.zone = Zone {
+            start_x: 0.5,
+            end_x: 5.5,
+            steps_until_end: 5,
+            total_move_steps: 5,
+        };
+        // zone.current_x is 0.5
+        // zone left foot x is 0.0
+        assert_eq!(gen.prob(0), 1.0);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(6), 0.5);
+        assert_eq!(gen.prob(9), 0.25);
+        gen.step(1);
+        // zone.current_x is 1.5
+        // zone right foot x is 2.0
+        assert_eq!(gen.prob(0), 0.5);
+        assert_eq!(gen.prob(3), 1.0);
+        assert_eq!(gen.prob(6), 1.0);
+        assert_eq!(gen.prob(9), 1.0);
+        assert_eq!(gen.prob(12), 0.5);
     }
 }
 

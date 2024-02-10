@@ -155,9 +155,10 @@ fn create_params(
         } else {
             None
         },
-        doubles_movement: Some((1.2, 0.02)),
+        doubles_movement: Some((0.5, 0.02)),
         doubles_dist_from_side: if vroom { Some(0.0) } else { None },
         doubles_steps_per_dist: if vroom { Some(4.0) } else { None },
+        doubles_track_individual_feet: !vroom && !has_crossovers,
         disallow_foot_opposite_side: !has_crossovers,
         remove_jumps: has_crossovers,
         min_difficulty,
