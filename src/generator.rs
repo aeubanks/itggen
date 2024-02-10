@@ -1,4 +1,3 @@
-use crate::coord::Coord;
 use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
@@ -51,8 +50,8 @@ struct FootStatus {
 
 #[derive(Debug, Copy, Clone)]
 struct Zone {
-    start: Coord,
-    end: Coord,
+    start_x: f32,
+    end_x: f32,
     total_move_steps: i32,
     steps_until_end: i32,
 }
@@ -66,37 +65,37 @@ impl Zone {
         self.steps_until_end <= 0
     }
 
-    fn center(&self) -> Coord {
+    fn current_x(&self) -> f32 {
         let ratio =
             (self.total_move_steps - self.steps_until_end) as f32 / self.total_move_steps as f32;
-        self.start + (self.end - self.start) * ratio
+        self.start_x + (self.end_x - self.start_x) * ratio
     }
 }
 
 #[test]
 fn test_zone() {
     let mut z = Zone {
-        start: Coord(1.0, 0.0),
-        end: Coord(7.0, 3.0),
+        start_x: 1.0,
+        end_x: 7.0,
         total_move_steps: 6,
         steps_until_end: 6,
     };
     assert!(!z.is_done());
-    assert_eq!(z.center(), Coord(1.0, 0.0));
+    assert_eq!(z.current_x(), 1.0);
     z.step();
-    assert_eq!(z.center(), Coord(2.0, 0.5));
+    assert_eq!(z.current_x(), 2.0);
     z.step();
-    assert_eq!(z.center(), Coord(3.0, 1.0));
+    assert_eq!(z.current_x(), 3.0);
     z.step();
-    assert_eq!(z.center(), Coord(4.0, 1.5));
+    assert_eq!(z.current_x(), 4.0);
     z.step();
-    assert_eq!(z.center(), Coord(5.0, 2.0));
+    assert_eq!(z.current_x(), 5.0);
     z.step();
     assert!(!z.is_done());
-    assert_eq!(z.center(), Coord(6.0, 2.5));
+    assert_eq!(z.current_x(), 6.0);
     z.step();
     assert!(z.is_done());
-    assert_eq!(z.center(), Coord(7.0, 3.0));
+    assert_eq!(z.current_x(), 7.0);
 }
 
 pub struct Generator {
@@ -119,7 +118,7 @@ impl Generator {
         let zone = Self::rand_zone(
             &mut rand,
             style,
-            style.init_pos(),
+            style.init_pos().0,
             params.doubles_dist_from_side,
             params.doubles_steps_per_dist,
         );
@@ -257,7 +256,7 @@ impl Generator {
         Self::rand_zone(
             &mut self.rand,
             self.style,
-            self.zone.end,
+            self.zone.end_x,
             self.params.doubles_dist_from_side,
             self.params.doubles_steps_per_dist,
         )
@@ -266,7 +265,7 @@ impl Generator {
     fn rand_zone(
         rand: &mut StdRng,
         style: Style,
-        prev_coord: Coord,
+        prev_x: f32,
         override_dist_from_edge: Option<f32>,
         override_steps_per_dist: Option<f32>,
     ) -> Zone {
@@ -280,24 +279,24 @@ impl Generator {
         let max = style.max_x_coord() - dist_from_edge;
         if max <= dist_from_edge {
             return Zone {
-                start: prev_coord,
-                end: Coord(style.center_x(), 1.0),
+                start_x: prev_x,
+                end_x: style.center_x(),
                 total_move_steps: 1,
                 steps_until_end: 1,
             };
         }
-        let x_dest = if prev_coord.0 < style.center_x() {
+        let x_dest = if prev_x < style.center_x() {
             max
         } else {
             dist_from_edge
         };
 
-        let dist = (x_dest - prev_coord.0).abs();
+        let dist = (x_dest - prev_x).abs();
         let steps_per_dist = override_steps_per_dist.unwrap_or_else(|| rand.gen_range(12.0..16.0));
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
-            start: prev_coord,
-            end: Coord(x_dest, 1.0),
+            start_x: prev_x,
+            end_x: x_dest,
             total_move_steps: move_steps,
             steps_until_end: move_steps,
         }
@@ -308,18 +307,8 @@ impl Generator {
 fn test_rand_zone() {
     let mut rand = StdRng::from_entropy();
     let style = Style::ItgDoubles;
-    assert!(
-        Generator::rand_zone(&mut rand, style, Coord(4.0, 1.0), None, None)
-            .end
-            .0
-            <= style.center_x()
-    );
-    assert!(
-        Generator::rand_zone(&mut rand, style, Coord(2.0, 1.0), None, None)
-            .end
-            .0
-            >= style.center_x()
-    );
+    assert!(Generator::rand_zone(&mut rand, style, 4.0, None, None).end_x <= style.center_x());
+    assert!(Generator::rand_zone(&mut rand, style, 2.0, None, None).end_x >= style.center_x());
 }
 
 impl Generator {
@@ -613,9 +602,9 @@ impl Generator {
             }
         }
         if let Some((dist, decay)) = self.params.doubles_movement {
-            let center = self.zone.center();
+            let zone_x = self.zone.current_x();
             let cur_coord = self.style.coord(col);
-            let over_dist = (center.0 - cur_coord.0).abs() - dist;
+            let over_dist = (zone_x - cur_coord.0).abs() - dist;
             if over_dist > 0.0 {
                 prob *= decay.powf(over_dist);
             }
@@ -1220,8 +1209,8 @@ fn steps_prob() {
         gen.step(1);
         gen.step(7);
         gen.zone = Zone {
-            start: Coord(0.0, 1.0),
-            end: Coord(5.0, 1.0),
+            start_x: 0.0,
+            end_x: 5.0,
             steps_until_end: 5,
             total_move_steps: 5,
         };
