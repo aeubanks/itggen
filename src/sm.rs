@@ -191,15 +191,8 @@ fn parse_chart(contents: &str) -> Result<SMChart, String> {
     })
 }
 
-pub fn generate(
-    contents: &str,
-    from_style: Style,
-    to_style: Style,
-    params: GeneratorParameters,
-    edit: bool,
-    extra_description: Option<&String>,
-) -> Result<String, String> {
-    let mut ret = String::new();
+fn parse_charts(contents: &str) -> Result<Vec<SMChart>, String> {
+    let mut ret = Vec::new();
     let mut search_from = 0;
     while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
         let semicolon_idx = match find_start_at(&contents, notes_idx, ";") {
@@ -210,6 +203,23 @@ pub fn generate(
         };
         let notes_str = &contents[notes_idx..=semicolon_idx];
         let chart = parse_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
+        ret.push(chart);
+        search_from = semicolon_idx + 1;
+    }
+    Ok(ret)
+}
+
+pub fn generate(
+    contents: &str,
+    from_style: Style,
+    to_style: Style,
+    params: GeneratorParameters,
+    edit: bool,
+    extra_description: Option<&String>,
+) -> Result<String, String> {
+    let mut ret = String::new();
+    let charts = parse_charts(contents)?;
+    for chart in charts {
         if !edit && chart.style == to_style.sm_string() && chart.difficulty != "Edit" {
             return Err(format!("already contains {} charts", to_style.sm_string()));
         }
@@ -221,7 +231,6 @@ pub fn generate(
             edit,
             extra_description,
         )?);
-        search_from = semicolon_idx + 1;
     }
 
     Ok(ret)
