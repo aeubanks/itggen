@@ -53,24 +53,17 @@ fn params_str(params: GeneratorParameters) -> String {
     ret
 }
 
-fn generate_chart(
+fn write_chart(
     chart: &SMChart,
     from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
     edit: bool,
     extra_description: Option<&String>,
-) -> Result<String, String> {
+    generated_notes: &String,
+) -> String {
     let mut ret = String::new();
 
-    if chart.style != from_style.sm_string() {
-        println!("  skipping {} chart", chart.style);
-        return Ok("".to_owned());
-    }
-    if chart.is_autogen() {
-        println!("  skipping existing autogen chart");
-        return Ok("".to_owned());
-    }
     ret.push_str("#NOTES:\n");
     ret.push_str("     ");
     ret.push_str(to_style.sm_string());
@@ -100,20 +93,20 @@ fn generate_chart(
     ret.push_str(":\n     ");
     ret.push_str(if edit { "Edit" } else { &chart.difficulty });
     ret.push_str(":\n     ");
-    if let Some(ignore) = params.min_difficulty {
-        if chart.level < ignore {
-            return Ok("".to_owned());
-        }
-    }
-    if let Some(ignore) = params.max_difficulty {
-        if chart.level > ignore {
-            return Ok("".to_owned());
-        }
-    }
 
     ret.push_str(&chart.level.to_string());
     ret.push_str(":\n     :\n");
 
+    ret.push_str(generated_notes);
+    ret
+}
+
+fn generate_notes(
+    chart: &SMChart,
+    to_style: Style,
+    params: GeneratorParameters,
+) -> Result<String, String> {
+    let mut ret = String::new();
     let mut gen = Generator::new(to_style, params);
     for l in &chart.notes_lines {
         if let Some(cols) = columns(&l, params.remove_jumps) {
@@ -136,7 +129,6 @@ fn generate_chart(
             return Err(format!("unknown notes line: {}", l));
         }
     }
-    println!("  generated for {}", chart.difficulty);
     Ok(ret)
 }
 
@@ -223,14 +215,35 @@ pub fn generate(
         if !edit && chart.style == to_style.sm_string() && chart.difficulty != "Edit" {
             return Err(format!("already contains {} charts", to_style.sm_string()));
         }
-        ret.push_str(&generate_chart(
+        if chart.style != from_style.sm_string() {
+            println!("  skipping {} chart", chart.style);
+            continue;
+        }
+        if chart.is_autogen() {
+            println!("  skipping existing autogen chart");
+            continue;
+        }
+        if let Some(ignore) = params.min_difficulty {
+            if chart.level < ignore {
+                continue;
+            }
+        }
+        if let Some(ignore) = params.max_difficulty {
+            if chart.level > ignore {
+                continue;
+            }
+        }
+        let generated_notes = generate_notes(&chart, to_style, params)?;
+        ret.push_str(&write_chart(
             &chart,
             from_style,
             to_style,
             params,
             edit,
             extra_description,
-        )?);
+            &generated_notes,
+        ));
+        println!("  generated for {}", chart.difficulty);
     }
 
     Ok(ret)
