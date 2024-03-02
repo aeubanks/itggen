@@ -53,21 +53,14 @@ fn params_str(params: GeneratorParameters) -> String {
     ret
 }
 
-fn write_chart(
+fn write_description(
     chart: &SMChart,
     from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
-    edit: bool,
     extra_description: Option<&String>,
-    generated_notes: &String,
 ) -> String {
     let mut ret = String::new();
-
-    ret.push_str("#NOTES:\n");
-    ret.push_str("     ");
-    ret.push_str(to_style.sm_string());
-    ret.push_str(":\n     ");
     ret.push_str("AYEAG");
     let params_str = params_str(params);
     if !params_str.is_empty() {
@@ -90,13 +83,75 @@ fn write_chart(
         ret.push_str(" - ");
         ret.push_str(&chart.description);
     }
+    ret
+}
+
+fn write_sm_chart(
+    chart: &SMChart,
+    from_style: Style,
+    to_style: Style,
+    params: GeneratorParameters,
+    edit: bool,
+    extra_description: Option<&String>,
+    generated_notes: &String,
+) -> String {
+    let mut ret = String::new();
+    ret.push_str("#NOTES:\n");
+    ret.push_str("     ");
+    ret.push_str(to_style.sm_string());
+    ret.push_str(":\n     ");
+    ret.push_str(&write_description(
+        chart,
+        from_style,
+        to_style,
+        params,
+        extra_description,
+    ));
     ret.push_str(":\n     ");
     ret.push_str(if edit { "Edit" } else { &chart.difficulty });
     ret.push_str(":\n     ");
-
     ret.push_str(&chart.level.to_string());
     ret.push_str(":\n     :\n");
+    ret.push_str(generated_notes);
+    ret
+}
 
+fn write_ssc_chart(
+    chart: &SMChart,
+    from_style: Style,
+    to_style: Style,
+    params: GeneratorParameters,
+    edit: bool,
+    extra_description: Option<&String>,
+    generated_notes: &String,
+) -> String {
+    let mut ret = String::new();
+
+    ret.push_str("#NOTEDATA:;\n");
+
+    ret.push_str("#STEPSTYPE:");
+    ret.push_str(to_style.sm_string());
+    ret.push_str(";\n");
+
+    ret.push_str("#DESCRIPTION:");
+    ret.push_str(&write_description(
+        chart,
+        from_style,
+        to_style,
+        params,
+        extra_description,
+    ));
+    ret.push_str(";\n");
+
+    ret.push_str("#DIFFICULTY:");
+    ret.push_str(if edit { "Edit" } else { &chart.difficulty });
+    ret.push_str(";\n");
+
+    ret.push_str("#METER:");
+    ret.push_str(&chart.level.to_string());
+    ret.push_str(";\n");
+
+    ret.push_str("#NOTES:\n");
     ret.push_str(generated_notes);
     ret
 }
@@ -146,7 +201,7 @@ impl SMChart {
     }
 }
 
-fn parse_chart(contents: &str) -> Result<SMChart, String> {
+fn parse_sm_chart(contents: &str) -> Result<SMChart, String> {
     let lines = to_lines(contents);
     if lines.len() < 6 {
         return Err("invalid metadata".to_owned());
@@ -181,14 +236,91 @@ fn parse_chart(contents: &str) -> Result<SMChart, String> {
     })
 }
 
-fn parse_charts(contents: &str) -> Result<Vec<SMChart>, String> {
+fn parse_sm_charts(contents: &str) -> Result<Vec<SMChart>, String> {
     let mut ret = Vec::new();
     let mut search_from = 0;
     while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
         let semicolon_idx = find_start_at(&contents, notes_idx, ";")
             .ok_or("couldn't find semicolon after #NOTES".to_owned())?;
         let notes_str = &contents[notes_idx..=semicolon_idx];
-        let chart = parse_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
+        let chart =
+            parse_sm_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
+        ret.push(chart);
+        search_from = semicolon_idx + 1;
+    }
+    Ok(ret)
+}
+
+fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
+    let lines = to_lines(contents);
+    let mut style = None;
+    let mut description = None;
+    let mut difficulty = None;
+    let mut level = None;
+    let mut notes_lines = Vec::new();
+    let mut found_notes = false;
+    let mut done = false;
+    fn value_for_key(line: &str, key: &str) -> Option<String> {
+        let mut line = line.to_owned();
+        if line.pop() != Some(';') {
+            return None;
+        }
+        let prefix = format!("#{}:", key);
+        if !line.starts_with(&prefix) {
+            return None;
+        }
+        Some(line[prefix.len()..].to_owned())
+    }
+    for line in lines {
+        if done {
+            return Err("found more lines after #NOTES:;".to_owned());
+        }
+        if found_notes {
+            if line == ";" {
+                done = true;
+            }
+            notes_lines.push(line);
+        } else {
+            if let Some(s) = value_for_key(&line, "STEPSTYPE") {
+                style = Some(s);
+            } else if let Some(d) = value_for_key(&line, "DESCRIPTION") {
+                description = Some(d);
+            } else if let Some(d) = value_for_key(&line, "DIFFICULTY") {
+                difficulty = Some(d);
+            } else if let Some(d) = value_for_key(&line, "METER") {
+                level = Some(
+                    d.parse::<i32>()
+                        .map_err(|e| format!("Couldn't parse METER: {}", e))?,
+                );
+            } else if line == "#NOTES:" {
+                found_notes = true;
+            }
+        }
+    }
+    let style = style.ok_or("No STEPSTYPE")?;
+    let description = description.ok_or("No DESCRIPTION")?;
+    let difficulty = difficulty.ok_or("No DIFFICULTY")?;
+    let level = level.ok_or("No METER")?;
+    Ok(SMChart {
+        style,
+        description,
+        difficulty,
+        level,
+        notes_lines,
+    })
+}
+
+fn parse_ssc_charts(contents: &str) -> Result<Vec<SMChart>, String> {
+    let mut ret = Vec::new();
+    let mut search_from = 0;
+    while let Some(notedata_idx) = find_start_at(&contents, search_from, "#NOTEDATA:") {
+        let notes_idx = find_start_at(&contents, notedata_idx, "NOTES:")
+            .ok_or("couldn't find #NOTES after #NOTEDATA".to_owned())?;
+        let semicolon_idx = find_start_at(&contents, notes_idx, ";")
+            .ok_or("couldn't find semicolon after #NOTES".to_owned())?;
+        let chart_str = &contents[notedata_idx..=semicolon_idx];
+        let chart =
+            parse_ssc_chart(chart_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
         ret.push(chart);
         search_from = semicolon_idx + 1;
     }
@@ -202,9 +334,14 @@ pub fn generate(
     params: GeneratorParameters,
     edit: bool,
     extra_description: Option<&String>,
+    is_ssc: bool,
 ) -> Result<String, String> {
     let mut ret = String::new();
-    let charts = parse_charts(contents)?;
+    let charts = if is_ssc {
+        parse_ssc_charts(contents)
+    } else {
+        parse_sm_charts(contents)
+    }?;
     for chart in charts {
         if !edit && chart.style == to_style.sm_string() && chart.difficulty != "Edit" {
             return Err(format!("already contains {} charts", to_style.sm_string()));
@@ -228,15 +365,27 @@ pub fn generate(
             }
         }
         let generated_notes = generate_notes(&chart, to_style, params)?;
-        ret.push_str(&write_chart(
-            &chart,
-            from_style,
-            to_style,
-            params,
-            edit,
-            extra_description,
-            &generated_notes,
-        ));
+        ret.push_str(&if is_ssc {
+            write_ssc_chart(
+                &chart,
+                from_style,
+                to_style,
+                params,
+                edit,
+                extra_description,
+                &generated_notes,
+            )
+        } else {
+            write_sm_chart(
+                &chart,
+                from_style,
+                to_style,
+                params,
+                edit,
+                extra_description,
+                &generated_notes,
+            )
+        });
         println!("  generated for {}", chart.difficulty);
     }
 
@@ -258,6 +407,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -270,6 +420,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -282,6 +433,7 @@ fn test_generate() {
             params,
             false,
             Some(&"foo".to_owned()),
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - foo - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -294,6 +446,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Hard:\n     17:\n     :\n00000000\n;\n#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -306,6 +459,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert!(g.is_err());
     }
@@ -318,6 +472,7 @@ fn test_generate() {
             params,
             true,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-single:\n     AYEAG[H] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n#NOTES:\n     dance-single:\n     AYEAG[C] - Zaia:\n     Edit:\n     17:\n     :\n0000\n;\n".to_owned()))
     }
@@ -330,6 +485,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert!(g.is_err());
     }
@@ -342,6 +498,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert!(g.is_err());
     }
@@ -354,6 +511,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert!(g.is_err());
     }
@@ -366,6 +524,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert!(g.is_err());
     }
@@ -378,6 +537,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert!(g.is_err());
     }
@@ -390,6 +550,7 @@ fn test_generate() {
             GeneratorParameters::default(),
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG(F) - Zaia:\n     Challenge:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -406,6 +567,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g.unwrap().matches('1').count(), 1);
     }
@@ -419,6 +581,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         let res = g.unwrap();
         assert!(res.contains("0000110000"));
@@ -434,6 +597,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         let res = g.unwrap();
         assert!(res.contains("0000110000"));
@@ -452,6 +616,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     10:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -468,6 +633,7 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
     }
@@ -480,8 +646,48 @@ fn test_generate() {
             params,
             false,
             None,
+            false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     9:\n     :\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            true,
+            None,
+            true,
+        );
+        assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Edit;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            true,
+        );
+        assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Challenge;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            true,
+        );
+        assert_eq!(g, Err("Couldn't parse chart: No STEPSTYPE".to_owned()));
     }
 }
 

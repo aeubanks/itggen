@@ -72,7 +72,7 @@ struct Opts {
     dry_run: bool,
 }
 
-fn sm_files(path: &Path) -> Vec<PathBuf> {
+fn sm_ssc_files(path: &Path) -> Vec<(PathBuf, bool)> {
     let rd = match std::fs::read_dir(&path) {
         Ok(rd) => rd,
         Err(_) => {
@@ -84,12 +84,14 @@ fn sm_files(path: &Path) -> Vec<PathBuf> {
         if let Ok(de) = de {
             if let Ok(t) = de.file_type() {
                 if t.is_dir() {
-                    ret.append(&mut sm_files(&de.path()));
+                    ret.append(&mut sm_ssc_files(&de.path()));
                 } else if t.is_file() {
                     let p = de.path();
                     if let Some(Some(ext)) = p.extension().map(|e| e.to_str()) {
                         if ext.to_lowercase() == "sm" {
-                            ret.push(de.path());
+                            ret.push((de.path(), false));
+                        } else if ext.to_lowercase() == "ssc" {
+                            ret.push((de.path(), true));
                         }
                     }
                 }
@@ -181,13 +183,13 @@ fn main() -> std::io::Result<()> {
 
     println!("params: {:?}", params);
 
-    let files: Vec<PathBuf> = opts.inputs.iter().flat_map(|i| sm_files(&i)).collect();
+    let files: Vec<(PathBuf, bool)> = opts.inputs.iter().flat_map(|i| sm_ssc_files(&i)).collect();
 
     if files.is_empty() {
         println!("no input files...");
     }
 
-    for p in files {
+    for (p, is_ssc) in files {
         println!("generating for {:?}", p);
         let mut contents = match std::fs::read_to_string(p.clone()) {
             Ok(s) => s,
@@ -217,6 +219,7 @@ fn main() -> std::io::Result<()> {
                 params,
                 opts.edits,
                 opts.extra_description.as_ref(),
+                is_ssc,
             ) {
                 Ok(s) => {
                     generated.push('\n');
