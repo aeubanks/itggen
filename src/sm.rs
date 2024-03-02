@@ -150,7 +150,7 @@ struct SMChart {
 
 impl SMChart {
     fn is_autogen(&self) -> bool {
-        self.description.contains("AYEAG")
+        self.description.starts_with("AYEAG") || self.description.starts_with("AUTO")
     }
 }
 
