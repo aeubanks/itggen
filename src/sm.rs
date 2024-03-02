@@ -156,12 +156,10 @@ fn parse_chart(contents: &str) -> Result<SMChart, String> {
     if metadata[0] != "#NOTES:" {
         return Err(format!("expected '#NOTES:', got '{}'", metadata[0]));
     }
-    let level = match metadata[4].replace(":", "").parse::<i32>() {
-        Ok(d) => d,
-        Err(e) => {
-            return Err(format!("Couldn't parse difficulty: {}", e));
-        }
-    };
+    let level = metadata[4]
+        .replace(":", "")
+        .parse::<i32>()
+        .map_err(|e| format!("Couldn't parse difficulty: {}", e))?;
     let mut style = metadata[1].to_owned();
     if style.pop() != Some(':') {
         return Err("Invalid style".to_owned());
@@ -187,12 +185,8 @@ fn parse_charts(contents: &str) -> Result<Vec<SMChart>, String> {
     let mut ret = Vec::new();
     let mut search_from = 0;
     while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
-        let semicolon_idx = match find_start_at(&contents, notes_idx, ";") {
-            Some(i) => i,
-            None => {
-                return Err("couldn't find semicolon after #NOTES".to_owned());
-            }
-        };
+        let semicolon_idx = find_start_at(&contents, notes_idx, ";")
+            .ok_or("couldn't find semicolon after #NOTES".to_owned())?;
         let notes_str = &contents[notes_idx..=semicolon_idx];
         let chart = parse_chart(notes_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
         ret.push(chart);
