@@ -190,6 +190,7 @@ impl Generator {
 
     fn choose_from_probs(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
         let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
+        assert!(total_prob != 0.0, "All valid columns have probability 0.0");
         let prob_remaining = self.rand.gen_range(0.0..total_prob);
         Self::choose_from_probs_with_prob(col_probs, prob_remaining)
     }
