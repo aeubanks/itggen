@@ -20,6 +20,9 @@ struct Opts {
     )]
     inputs: Vec<PathBuf>,
 
+    #[structopt(long = "seed", help = "Seed for rng")]
+    seed: Option<u64>,
+
     #[structopt(short = "i", help = "Style to base charts off of (e.g. 'itg-singles')")]
     from_style: Style,
 
@@ -102,6 +105,7 @@ fn sm_ssc_files(path: &Path) -> Vec<(PathBuf, bool)> {
 }
 
 fn create_params(
+    seed: Option<u64>,
     crossovers: i32,
     more_easy_crossovers: bool,
     vroom: bool,
@@ -112,7 +116,7 @@ fn create_params(
 ) -> GeneratorParameters {
     let has_crossovers = crossovers != 0;
     GeneratorParameters {
-        seed: None,
+        seed,
         disallow_footswitch,
         max_repeated: None,
         repeated_decay: if preserve_input_repetitions {
@@ -176,6 +180,7 @@ fn main() -> std::io::Result<()> {
     let opts = Opts::from_args();
 
     let params = create_params(
+        opts.seed,
         opts.crossovers,
         opts.more_easy_crossovers,
         opts.vroom,
