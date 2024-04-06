@@ -115,7 +115,11 @@ fn create_params(
         seed: None,
         disallow_footswitch,
         max_repeated: None,
-        repeated_decay: Some((1, 0.2)),
+        repeated_decay: if preserve_input_repetitions {
+            None
+        } else {
+            Some((1, 0.2))
+        },
         other_foot_repeat_decay: Some(0.3),
         max_dist_between_feet: Some(2.9),
         max_dist_between_feet_if_crossover: Some(2.5),
