@@ -140,7 +140,9 @@ fn create_params(
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
         horizontal_dist_between_3_steps_same_foot_decay: if has_crossovers { None } else { None },
-        max_horizontal_dist_between_4_steps_both_feet: if has_crossovers {
+        max_horizontal_dist_between_4_steps_both_feet: if has_crossovers
+            || preserve_input_repetitions
+        {
             None
         } else {
             Some(2.5)
