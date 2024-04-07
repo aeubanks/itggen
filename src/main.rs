@@ -4,7 +4,7 @@ mod generator;
 mod sm;
 mod style;
 
-use generator::{Generator, GeneratorParameters};
+use generator::GeneratorParameters;
 use std::f32::consts::PI;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -249,9 +249,6 @@ fn main() -> std::io::Result<()> {
             println!("  done");
         }
     }
-
-    let mut gen = Generator::new(Style::ItgDoubles, GeneratorParameters::default());
-    let _ = gen.gen_with_input_col(0);
 
     Ok(())
 }
