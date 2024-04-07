@@ -252,3 +252,46 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_params() {
+    use rand::prelude::*;
+    let mut chart =
+        "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n"
+            .to_owned();
+    let mut rng = StdRng::from_entropy();
+    for _ in 0..500 {
+        chart.push_str(match rng.gen_range(0..4) {
+            0 => "1000",
+            1 => "0100",
+            2 => "0010",
+            3 => "0001",
+            _ => panic!(),
+        });
+        chart.push('\n');
+    }
+    chart.push(';');
+    for to_style in [Style::ItgDoubles, Style::PumpSingles, Style::PumpDoubles] {
+        let check_params = |params: GeneratorParameters| {
+            let g = sm::generate(
+                &chart,
+                Style::ItgSingles,
+                to_style,
+                params,
+                false,
+                None,
+                false,
+            );
+            assert!(g.is_ok());
+        };
+        for crossovers in 0..=2 {
+            for preserve in [false, true] {
+                check_params(create_params(
+                    None, crossovers, false, false, preserve, true, None, None,
+                ));
+            }
+        }
+        check_params(create_params(None, 1, true, false, false, true, None, None));
+        check_params(create_params(None, 0, false, true, false, true, None, None));
+    }
+}
