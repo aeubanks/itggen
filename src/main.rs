@@ -128,9 +128,13 @@ fn create_params(
         max_dist_between_feet: Some(2.9),
         max_dist_between_feet_if_crossover: Some(2.5),
         dist_between_feet_decay: None,
-        max_dist_between_steps: Some(if has_crossovers { 2.9 } else { 2.1 }),
+        max_dist_between_steps: Some(if has_crossovers || vroom { 2.9 } else { 2.1 }),
         dist_between_steps_decay: Some((1.5, 0.3)),
-        max_horizontal_dist_between_steps: if has_crossovers { None } else { Some(1.0) },
+        max_horizontal_dist_between_steps: if has_crossovers || vroom {
+            None
+        } else {
+            Some(1.0)
+        },
         horizontal_dist_between_steps_decay: None,
         max_horizontal_dist_between_steps_if_crossover: if more_easy_crossovers {
             Some(1.9)
@@ -139,9 +143,10 @@ fn create_params(
         },
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
-        horizontal_dist_between_3_steps_same_foot_decay: if has_crossovers { None } else { None },
+        horizontal_dist_between_3_steps_same_foot_decay: None,
         max_horizontal_dist_between_4_steps_both_feet: if has_crossovers
             || preserve_input_repetitions
+            || vroom
         {
             None
         } else {
@@ -161,7 +166,7 @@ fn create_params(
             None
         },
         max_bar_angle: None,
-        bar_angle_decay: Some((0.0, if has_crossovers { 0.4 } else { 0.2 })),
+        bar_angle_decay: Some((0.0, if has_crossovers || vroom { 0.4 } else { 0.2 })),
         preserve_input_repetitions: if preserve_input_repetitions {
             Some(if has_crossovers { 0.001 } else { 0.0 })
         } else {
@@ -169,7 +174,7 @@ fn create_params(
         },
         doubles_movement: Some((0.5, 0.02)),
         doubles_dist_from_side: if vroom { Some(0.0) } else { None },
-        doubles_steps_per_dist: if vroom { Some(4.0) } else { None },
+        doubles_steps_per_dist: if vroom { Some(2.5) } else { None },
         doubles_track_individual_feet: !vroom && !has_crossovers,
         disallow_foot_opposite_side: !has_crossovers,
         remove_jumps: has_crossovers,
