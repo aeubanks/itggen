@@ -122,7 +122,7 @@ fn create_params(
         repeated_decay: if preserve_input_repetitions {
             None
         } else {
-            Some((1, 0.2))
+            Some((1, 0.1))
         },
         other_foot_repeat_decay: Some(0.3),
         max_dist_between_feet: Some(2.9),

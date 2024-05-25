@@ -271,13 +271,7 @@ impl Generator {
         override_dist_from_edge: Option<f32>,
         override_steps_per_dist: Option<f32>,
     ) -> Zone {
-        let dist_from_edge = override_dist_from_edge.unwrap_or_else(|| {
-            if style == Style::PumpDoubles || style == Style::PumpTriples {
-                0.0
-            } else {
-                0.5
-            }
-        });
+        let dist_from_edge = override_dist_from_edge.unwrap_or(0.5);
         let max = style.max_x_coord() - dist_from_edge;
         if dist_from_edge >= max {
             // if interval is empty or trivial, default to center
