@@ -367,9 +367,20 @@ impl Generator {
 
     fn is_valid_col(&self, col: i8) -> bool {
         if self.params.disallow_footswitch {
-            if self.prev_foot_status().last_col == Some(col) {
-                return false;
+            if let Some(last_col) = self.prev_foot_status().last_col {
+                let sm_cols1 = self.style.sm_cols_for_col(last_col);
+                let sm_cols2 = self.style.sm_cols_for_col(col);
+                for sc1 in &sm_cols1 {
+                    for sc2 in &sm_cols2 {
+                        if sc1 == sc2 {
+                            return false;
+                        }
+                    }
+                }
             }
+            // if self.prev_foot_status().last_col == Some(col) {
+            //     return false;
+            // }
         }
         if let Some(mr) = self.params.max_repeated {
             if self.next_foot_status().last_col == Some(col)

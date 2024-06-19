@@ -125,7 +125,7 @@ fn create_params(
             Some((1, 0.1))
         },
         other_foot_repeat_decay: Some(0.3),
-        max_dist_between_feet: Some(2.9),
+        max_dist_between_feet: Some(3.9),
         max_dist_between_feet_if_crossover: Some(2.5),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(if has_crossovers || vroom { 2.9 } else { 2.1 }),
