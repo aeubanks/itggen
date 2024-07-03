@@ -55,10 +55,9 @@ fn params_str(params: GeneratorParameters) -> String {
 
 fn write_description(
     chart: &SMChart,
-    from_style: Style,
-    to_style: Style,
     params: GeneratorParameters,
     extra_description: Option<&String>,
+    should_write_from_difficulty: bool,
 ) -> String {
     let mut ret = String::new();
     ret.push_str("AYEAG");
@@ -68,7 +67,7 @@ fn write_description(
         ret.push_str(&params_str);
         ret.push(')');
     }
-    if to_style == from_style {
+    if should_write_from_difficulty {
         if let Some(c) = chart.difficulty.chars().next() {
             ret.push('[');
             ret.push(c);
@@ -88,11 +87,11 @@ fn write_description(
 
 fn write_sm_chart(
     chart: &SMChart,
-    from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
     edit: bool,
     extra_description: Option<&String>,
+    should_write_from_difficulty: bool,
     generated_notes: &String,
 ) -> String {
     let mut ret = String::new();
@@ -102,10 +101,9 @@ fn write_sm_chart(
     ret.push_str(":\n     ");
     ret.push_str(&write_description(
         chart,
-        from_style,
-        to_style,
         params,
         extra_description,
+        should_write_from_difficulty,
     ));
     ret.push_str(":\n     ");
     ret.push_str(if edit { "Edit" } else { &chart.difficulty });
@@ -118,11 +116,11 @@ fn write_sm_chart(
 
 fn write_ssc_chart(
     chart: &SMChart,
-    from_style: Style,
     to_style: Style,
     params: GeneratorParameters,
     edit: bool,
     extra_description: Option<&String>,
+    should_write_from_difficulty: bool,
     generated_notes: &String,
 ) -> String {
     let mut ret = String::new();
@@ -136,10 +134,9 @@ fn write_ssc_chart(
     ret.push_str("#DESCRIPTION:");
     ret.push_str(&write_description(
         chart,
-        from_style,
-        to_style,
         params,
         extra_description,
+        should_write_from_difficulty,
     ));
     ret.push_str(";\n");
 
@@ -337,12 +334,12 @@ pub fn generate(
     is_ssc: bool,
 ) -> Result<String, String> {
     let mut ret = String::new();
-    let charts = if is_ssc {
+    let mut charts = Vec::new();
+    for chart in if is_ssc {
         parse_ssc_charts(contents)
     } else {
         parse_sm_charts(contents)
-    }?;
-    for chart in charts {
+    }? {
         if !edit && chart.style == to_style.sm_string() && chart.difficulty != "Edit" {
             return Err(format!("already contains {} charts", to_style.sm_string()));
         }
@@ -364,28 +361,24 @@ pub fn generate(
                 continue;
             }
         }
+        charts.push(chart);
+    }
+    for chart in &charts {
         let generated_notes = generate_notes(&chart, to_style, params)?;
-        ret.push_str(&if is_ssc {
-            write_ssc_chart(
-                &chart,
-                from_style,
-                to_style,
-                params,
-                edit,
-                extra_description,
-                &generated_notes,
-            )
+        let write_fn = if is_ssc {
+            write_ssc_chart
         } else {
-            write_sm_chart(
-                &chart,
-                from_style,
-                to_style,
-                params,
-                edit,
-                extra_description,
-                &generated_notes,
-            )
-        });
+            write_sm_chart
+        };
+        ret.push_str(&write_fn(
+            &chart,
+            to_style,
+            params,
+            edit,
+            extra_description,
+            charts.len() > 1 && edit,
+            &generated_notes,
+        ));
         println!("  generated for {}", chart.difficulty);
     }
 
@@ -462,6 +455,19 @@ fn test_generate() {
             false,
         );
         assert!(g.is_err());
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            true,
+            None,
+            false,
+        );
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG[H] - Zaia:\n     Edit:\n     17:\n     :\n00000000\n;\n#NOTES:\n     dance-double:\n     AYEAG[C] - Zaia:\n     Edit:\n     17:\n     :\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Hard:\n     17:\n     useless:\n0000\n;\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0000\n;\n".to_owned();
