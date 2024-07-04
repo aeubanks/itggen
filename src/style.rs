@@ -11,6 +11,7 @@ pub enum Style {
     PumpDoubles,
     PumpTriples,
     PumpHalfDoubles,
+    PumpDoublesBrackets,
     PumpMiddleFour,
     HorizonSingles,
     HorizonDoubles,
@@ -32,6 +33,7 @@ impl FromStr for Style {
             "pump-doubles" => Ok(Style::PumpDoubles),
             "pump-triples" => Ok(Style::PumpTriples),
             "pump-halfdoubles" => Ok(Style::PumpHalfDoubles),
+            "pump-doubles-brackets" => Ok(Style::PumpDoublesBrackets),
             "pump-middlefour" => Ok(Style::PumpMiddleFour),
             "horizon-singles" => Ok(Style::HorizonSingles),
             "horizon-doubles" => Ok(Style::HorizonDoubles),
@@ -57,6 +59,7 @@ impl Style {
             Style::PumpDoubles => 10,
             Style::PumpTriples => 15,
             Style::PumpHalfDoubles => 6,
+            Style::PumpDoublesBrackets => 10,
             Style::PumpMiddleFour => 4,
             Style::HorizonSingles => 9,
             Style::HorizonDoubles => 18,
@@ -78,7 +81,10 @@ impl Style {
             Style::ItgDoubles => "dance-double",
             Style::ItgTriples => "dance-triple",
             Style::PumpSingles => "pump-single",
-            Style::PumpDoubles | Style::PumpHalfDoubles | Style::PumpMiddleFour => "pump-double",
+            Style::PumpDoubles
+            | Style::PumpHalfDoubles
+            | Style::PumpMiddleFour
+            | Style::PumpDoublesBrackets => "pump-double",
             Style::PumpTriples => "pump-triple",
             Style::HorizonSingles => "horizon-single",
             Style::HorizonDoubles => "horizon-double",
@@ -120,6 +126,10 @@ impl Style {
                 Foot::Left => 1,
                 Foot::Right => 2,
             },
+            Style::PumpDoublesBrackets => match foot {
+                Foot::Left => 3,
+                Foot::Right => 6,
+            },
             Style::HorizonSingles => match foot {
                 Foot::Left => 1,
                 Foot::Right => 7,
@@ -146,6 +156,7 @@ impl Style {
             Style::ItgTriples | Style::PumpTriples | Style::HorizonTriples => 8.0,
             Style::PumpHalfDoubles => 3.0,
             Style::PumpMiddleFour => 1.0,
+            Style::PumpDoublesBrackets => 4.0,
         }
     }
 
@@ -247,6 +258,19 @@ impl Style {
                 3 => Coord(1.0, 1.0),
                 _ => panic!(),
             },
+            Style::PumpDoublesBrackets => match col {
+                0 => Coord(0.0, 0.0),
+                1 => Coord(0.0, 1.0),
+                2 => Coord(1.0, 1.0),
+                3 => Coord(1.0, 0.0),
+                4 => Coord(2.0, 0.0),
+                5 => Coord(2.0, 1.0),
+                6 => Coord(3.0, 0.0),
+                7 => Coord(3.0, 1.0),
+                8 => Coord(4.0, 1.0),
+                9 => Coord(4.0, 0.0),
+                _ => panic!(),
+            },
             Style::HorizonSingles => match col {
                 0 => Coord(0.0, 0.0),
                 1 => Coord(0.0, 1.0),
@@ -310,6 +334,27 @@ impl Style {
                 26 => Coord(8.0, 0.0),
                 _ => panic!(),
             },
+        }
+    }
+
+    pub fn sm_cols_for_col(&self, col: i8) -> Vec<i8> {
+        match self {
+            Style::PumpDoublesBrackets => match col {
+                0 => vec![0, 2],
+                1 => vec![1, 2],
+                2 => vec![3, 2],
+                3 => vec![4, 2],
+                4 => vec![4, 5],
+                5 => vec![3, 6],
+                6 => vec![5, 7],
+                7 => vec![6, 7],
+                8 => vec![8, 7],
+                9 => vec![9, 7],
+                _ => panic!(),
+            },
+            _ => {
+                vec![col]
+            }
         }
     }
 }

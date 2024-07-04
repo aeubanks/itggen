@@ -153,6 +153,22 @@ fn write_ssc_chart(
     ret
 }
 
+fn row_notes(cols: &[i8], style: Style) -> String {
+    let mut ret = String::new();
+    let mut row = "0".repeat(style.num_cols() as usize);
+    for col in cols {
+        for sm_col in style.sm_cols_for_col(*col) {
+            let sm_col_usize = sm_col as usize;
+            row.replace_range(sm_col_usize..=sm_col_usize, "1");
+        }
+    }
+
+    ret.push_str(&"0".repeat(style.extra_0s()));
+    ret.push_str(&row);
+    ret.push_str(&"0".repeat(style.extra_0s()));
+    ret
+}
+
 fn generate_notes(
     chart: &SMChart,
     to_style: Style,
@@ -167,12 +183,7 @@ fn generate_notes(
                 let idx = gen.gen_with_input_col(col);
                 out_cols.push(idx);
             }
-            let row = (0..(to_style.num_cols()))
-                .map(|c| if out_cols.contains(&c) { '1' } else { '0' })
-                .collect::<String>();
-            ret.push_str(&"0".repeat(to_style.extra_0s()));
-            ret.push_str(&row);
-            ret.push_str(&"0".repeat(to_style.extra_0s()));
+            ret.push_str(&row_notes(&out_cols, to_style));
             ret.push('\n');
         } else if l == "," || l == ";" {
             ret.push_str(l);
@@ -607,6 +618,23 @@ fn test_generate() {
         );
         let res = g.unwrap();
         assert!(res.contains("0000110000"));
+        assert!(res.contains("pump-double"));
+    }
+    {
+        let params = GeneratorParameters::default();
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     33:\n     useless:\n0110\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::PumpDoublesBrackets,
+            params,
+            false,
+            None,
+            false,
+        );
+        let res = g.unwrap();
+        dbg!(&res);
+        assert!(res.contains("0010110100"));
         assert!(res.contains("pump-double"));
     }
     {

@@ -367,8 +367,16 @@ impl Generator {
 
     fn is_valid_col(&self, col: i8) -> bool {
         if self.params.disallow_footswitch {
-            if self.prev_foot_status().last_col == Some(col) {
-                return false;
+            if let Some(last_col) = self.prev_foot_status().last_col {
+                let sm_cols1 = self.style.sm_cols_for_col(last_col);
+                let sm_cols2 = self.style.sm_cols_for_col(col);
+                for sc1 in &sm_cols1 {
+                    for sc2 in &sm_cols2 {
+                        if sc1 == sc2 {
+                            return false;
+                        }
+                    }
+                }
             }
         }
         if let Some(mr) = self.params.max_repeated {
@@ -735,6 +743,16 @@ fn valid_steps() {
         gen.step(0);
         gen.step(3);
         assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
+    }
+    // no footswitches pump brackets
+    {
+        let mut params = GeneratorParameters::default();
+        params.disallow_footswitch = true;
+        let mut gen = Generator::new(Style::PumpDoublesBrackets, params);
+        gen.next_foot = Foot::Left;
+        gen.step(3);
+        gen.step(6);
+        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 5]);
     }
     // max repeated
     {
