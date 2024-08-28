@@ -150,6 +150,7 @@ fn write_ssc_chart(
 
     ret.push_str("#NOTES:\n");
     ret.push_str(generated_notes);
+    ret.push_str(";\n");
     ret
 }
 
@@ -266,43 +267,61 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
     let mut difficulty = None;
     let mut level = None;
     let mut notes_lines = Vec::new();
-    let mut found_notes = false;
-    let mut done = false;
-    fn value_for_key(line: &str, key: &str) -> Option<String> {
-        let mut line = line.to_owned();
-        if line.pop() != Some(';') {
-            return None;
-        }
-        let prefix = format!("#{}:", key);
-        if !line.starts_with(&prefix) {
-            return None;
-        }
-        Some(line[prefix.len()..].to_owned())
-    }
-    for line in lines {
-        if done {
-            return Err("found more lines after #NOTES:;".to_owned());
-        }
-        if found_notes {
-            if line == ";" {
-                done = true;
+    let mut new_kv = true;
+    let mut cur_key = String::new();
+    let mut cur_val_lines = Vec::new();
+    for mut line in lines {
+        if new_kv {
+            if line.remove(0) != '#' {
+                return Err("New key value line didn't start with #".to_owned());
             }
-            notes_lines.push(line);
-        } else {
-            if let Some(s) = value_for_key(&line, "STEPSTYPE") {
-                style = Some(s);
-            } else if let Some(d) = value_for_key(&line, "DESCRIPTION") {
-                description = Some(d);
-            } else if let Some(d) = value_for_key(&line, "DIFFICULTY") {
-                difficulty = Some(d);
-            } else if let Some(d) = value_for_key(&line, "METER") {
-                level = Some(
-                    d.parse::<i32>()
-                        .map_err(|e| format!("Couldn't parse METER: {}", e))?,
-                );
-            } else if line == "#NOTES:" {
-                found_notes = true;
+            let semicolon_idx = line.find(':').ok_or("couldn't find semicolon".to_owned())?;
+            let (key, val) = line.split_at(semicolon_idx);
+            cur_key = key.to_owned();
+            line = val[1..].to_owned();
+        }
+        new_kv = line.pop() == Some(';');
+        if !line.is_empty() {
+            cur_val_lines.push(line);
+        }
+        if new_kv {
+            match cur_key.as_str() {
+                "STEPSTYPE" => {
+                    if cur_val_lines.len() != 1 {
+                        return Err("STEPSTYPE should be one line".to_owned());
+                    }
+                    style = Some(cur_val_lines.pop().unwrap());
+                }
+                "DESCRIPTION" => {
+                    if cur_val_lines.len() != 1 {
+                        return Err("DESCRIPTION should be one line".to_owned());
+                    }
+                    description = Some(cur_val_lines.pop().unwrap());
+                }
+                "DIFFICULTY" => {
+                    if cur_val_lines.len() != 1 {
+                        return Err("DIFFICULTY should be one line".to_owned());
+                    }
+                    difficulty = Some(cur_val_lines.pop().unwrap());
+                }
+                "METER" => {
+                    if cur_val_lines.len() != 1 {
+                        return Err("METER should be one line".to_owned());
+                    }
+                    level = Some(
+                        cur_val_lines
+                            .pop()
+                            .unwrap()
+                            .parse::<i32>()
+                            .map_err(|e| format!("Couldn't parse METER: {}", e))?,
+                    );
+                }
+                "NOTES" => {
+                    notes_lines = cur_val_lines;
+                }
+                _ => {}
             }
+            cur_val_lines = Default::default();
         }
     }
     let style = style.ok_or("No STEPSTYPE")?;
@@ -320,17 +339,29 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
 
 fn parse_ssc_charts(contents: &str) -> Result<Vec<SMChart>, String> {
     let mut ret = Vec::new();
-    let mut search_from = 0;
-    while let Some(notedata_idx) = find_start_at(&contents, search_from, "#NOTEDATA:") {
-        let notes_idx = find_start_at(&contents, notedata_idx, "NOTES:")
-            .ok_or("couldn't find #NOTES after #NOTEDATA".to_owned())?;
-        let semicolon_idx = find_start_at(&contents, notes_idx, ";")
-            .ok_or("couldn't find semicolon after #NOTES".to_owned())?;
-        let chart_str = &contents[notedata_idx..=semicolon_idx];
-        let chart =
-            parse_ssc_chart(chart_str).map_err(|e| format!("Couldn't parse chart: {}", e))?;
-        ret.push(chart);
-        search_from = semicolon_idx + 1;
+    let mut notedata_idx = match find_start_at(&contents, 0, "#NOTEDATA:") {
+        Some(i) => i,
+        None => {
+            return Ok(Vec::new());
+        }
+    };
+    loop {
+        match find_start_at(&contents, notedata_idx + 1, "#NOTEDATA:") {
+            Some(next_notedata) => {
+                let chart_str = &contents[notedata_idx..next_notedata];
+                let chart = parse_ssc_chart(chart_str)
+                    .map_err(|e| format!("Couldn't parse chart: {}", e))?;
+                ret.push(chart);
+                notedata_idx = next_notedata;
+            }
+            None => {
+                let chart_str = &contents[notedata_idx..];
+                let chart = parse_ssc_chart(chart_str)
+                    .map_err(|e| format!("Couldn't parse chart: {}", e))?;
+                ret.push(chart);
+                break;
+            }
+        }
     }
     Ok(ret)
 }
@@ -698,6 +729,32 @@ fn test_generate() {
     }
     {
         let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            true,
+        );
+        assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Challenge;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            true,
+        );
+        assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Challenge;\n#METER:13;\n#NOTES:\n00000000\n;\n#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Challenge;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#NOTES:\n0000\n;\n#METER:13;\n".to_owned();
         let g = generate(
             &orig,
             Style::ItgSingles,
