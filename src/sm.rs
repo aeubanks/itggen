@@ -633,7 +633,6 @@ fn test_generate() {
             false,
         );
         let res = g.unwrap();
-        dbg!(&res);
         assert!(res.contains("0010110100"));
         assert!(res.contains("pump-double"));
     }
