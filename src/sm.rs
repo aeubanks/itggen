@@ -781,71 +781,78 @@ fn test_generate() {
     }
 }
 
-pub fn remove_existing_autogen(contents: &str) -> Result<String, String> {
-    let mut ret = String::new();
-    let mut search_from = 0;
-    while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
-        // Add everything up until the latest #NOTES
-        ret.push_str(&contents[search_from..notes_idx]);
-        let semicolon_idx = match find_start_at(&contents, notes_idx, ";") {
-            Some(i) => i,
-            None => {
-                return Err("couldn't find semicolon after #NOTES".to_owned());
-            }
-        };
-        let notes_str = &contents[notes_idx..=semicolon_idx];
-        if !notes_str.contains("AYEAG") {
-            ret.push_str(notes_str);
+pub fn remove_existing_autogen(contents: &str, is_ssc: bool) -> String {
+    let mut res = String::new();
+    let separator = if is_ssc { "#NOTEDATA:" } else { "#NOTES:" };
+    let mut first = true;
+    for split in contents.split(separator) {
+        if first {
+            res.push_str(split);
+            first = false;
+            continue;
         }
-        search_from = semicolon_idx + 1;
+        if !split.contains("AYEAG") {
+            res.push_str(&separator);
+            res.push_str(split);
+        }
     }
-    // Add everything after the last semicolon (or beginning if no #NOTES)
-    ret.push_str(&contents[search_from..]);
-    Ok(ret)
+    return res;
 }
 
 #[test]
 fn test_remove_existing_autogen() {
     {
         let orig = "".to_owned();
-        assert_eq!(remove_existing_autogen(&orig).unwrap(), orig);
+        assert_eq!(remove_existing_autogen(&orig, false), orig);
     }
     {
         let orig = "HIHI".to_owned();
-        assert_eq!(remove_existing_autogen(&orig).unwrap(), orig);
+        assert_eq!(remove_existing_autogen(&orig, false), orig);
     }
     {
         let orig = "ABC\nDEF\n#NOTES:\nasdf:\nAYEAG - 1:\n;\n".to_owned();
         assert_eq!(
-            remove_existing_autogen(&orig).unwrap(),
-            "ABC\nDEF\n\n".to_owned()
+            remove_existing_autogen(&orig, false),
+            "ABC\nDEF\n".to_owned()
         );
     }
     {
         let orig = "ABC\nDEF\n#NOTES:\nasdf:\nAYEAGF:\n;\n".to_owned();
         assert_eq!(
-            remove_existing_autogen(&orig).unwrap(),
-            "ABC\nDEF\n\n".to_owned()
+            remove_existing_autogen(&orig, false),
+            "ABC\nDEF\n".to_owned()
         );
     }
     {
+        let orig = "ABC\nDEF\n#NOTES:\nasdf:\nAYEAGF:\n;\n".to_owned();
+        assert_eq!(remove_existing_autogen(&orig, true), orig);
+    }
+    {
         let orig = "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n".to_owned();
-        assert_eq!(remove_existing_autogen(&orig).unwrap(), orig);
+        assert_eq!(remove_existing_autogen(&orig, false), orig);
     }
     {
         let orig =
             "ABC\nDEF\n#NOTES:\nasdf:\nAYEAG - 1:\n;\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;".to_owned();
         assert_eq!(
-            remove_existing_autogen(&orig).unwrap(),
-            "ABC\nDEF\n\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;".to_owned()
+            remove_existing_autogen(&orig, false),
+            "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;".to_owned()
         );
     }
     {
         let orig =
             "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n#NOTES:\nasdf:\nAYEAG - 1:\n;\n".to_owned();
         assert_eq!(
-            remove_existing_autogen(&orig).unwrap(),
-            "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n\n".to_owned()
+            remove_existing_autogen(&orig, false),
+            "ABC\nDEF\n#NOTES:\nasdf:\nAYEnoAG - 1:\n;\n".to_owned()
+        );
+    }
+    {
+        let orig =
+            "ABC\nDEF\n#NOTEDATA:\n#NOTES:;\n#DESCRIPTION:AYEnoAG - 1;\n#NOTEDATA:\n#NOTES:;\n#DESCRIPTION:AYEAG - 1:\n;\n".to_owned();
+        assert_eq!(
+            remove_existing_autogen(&orig, true),
+            "ABC\nDEF\n#NOTEDATA:\n#NOTES:;\n#DESCRIPTION:AYEnoAG - 1;\n".to_owned()
         );
     }
 }

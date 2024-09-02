@@ -207,15 +207,7 @@ fn main() -> std::io::Result<()> {
             }
         };
         if opts.remove_existing_autogen {
-            match sm::remove_existing_autogen(&contents) {
-                Ok(s) => {
-                    contents = s;
-                }
-                Err(e) => {
-                    println!("  couldn't remove existing autogen: {}", e);
-                    continue;
-                }
-            }
+            contents = sm::remove_existing_autogen(&contents, is_ssc);
         }
         let mut generated = String::new();
         for to_style in &opts.to_style {
