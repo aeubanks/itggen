@@ -45,7 +45,7 @@ fn params_str(params: GeneratorParameters) -> String {
     if let Some(ma) = params.max_angle {
         if ma > PI / 2.0 + 0.0001 {
             ret.push('C');
-            if ma > PI * 3.0 / 4.0 + 0.0001 {
+            if ma > PI + 0.0001 {
                 ret.push('+');
             }
         }

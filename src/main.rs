@@ -161,7 +161,7 @@ fn create_params(
             1.0,
             if has_crossovers || vroom { 0.4 } else { 0.3 },
         )),
-        max_angle: Some(PI * (2 + crossovers) as f32 / 4.0),
+        max_angle: Some(PI * (2.2 + crossovers as f32) / 4.0),
         angle_decay: None,
         max_turn: Some(if crossovers > 1 { PI } else { PI * 3.0 / 4.0 }),
         turn_decay: None,
