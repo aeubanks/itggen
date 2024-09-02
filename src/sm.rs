@@ -280,7 +280,10 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
             cur_key = key.to_owned();
             line = val[1..].to_owned();
         }
-        new_kv = line.pop() == Some(';');
+        new_kv = line.chars().last() == Some(';');
+        if new_kv {
+            line.pop();
+        }
         if !line.is_empty() {
             cur_val_lines.push(line);
         }
@@ -726,6 +729,19 @@ fn test_generate() {
             true,
         );
         assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Edit;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n,\n0000\n;".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            true,
+            None,
+            true,
+        );
+        assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Edit;\n#METER:13;\n#NOTES:\n00000000\n,\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
