@@ -138,11 +138,11 @@ impl Generator {
 impl Generator {
     #[cfg(test)]
     pub fn gen(&mut self) -> i8 {
-        self.gen_with_input_col(-1)
+        self.gen_with_input_col(-1, false)
     }
 
-    pub fn gen_with_input_col(&mut self, input_col: i8) -> i8 {
-        if self.params.preserve_input_repetitions.is_some() {
+    pub fn gen_with_input_col(&mut self, input_col: i8, is_jump: bool) -> i8 {
+        if self.params.preserve_input_repetitions.is_some() || is_jump {
             if self.next_foot_status().last_input_col == Some(input_col) {
                 if let Some(lc) = self.next_foot_status().last_col {
                     self.step_with_input_col(lc, input_col);
@@ -685,27 +685,59 @@ fn preserve_input_repetitions() {
     let mut gen = Generator::new(Style::HorizonDoubles, params);
 
     let f = gen.next_foot;
-    let c1 = gen.gen_with_input_col(7);
+    let c1 = gen.gen_with_input_col(7, false);
     assert_ne!(f, gen.next_foot);
     assert_eq!(gen.next_foot_status().last_input_col, None);
     assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
 
-    assert_eq!(gen.gen_with_input_col(7), c1);
+    assert_eq!(gen.gen_with_input_col(7, false), c1);
     assert_ne!(f, gen.next_foot);
     assert_eq!(gen.next_foot_status().last_input_col, None);
     assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
 
-    let c2 = gen.gen_with_input_col(6);
+    let c2 = gen.gen_with_input_col(6, false);
     assert_eq!(f, gen.next_foot);
     assert_eq!(gen.next_foot_status().last_input_col, Some(7));
     assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
 
-    assert_eq!(gen.gen_with_input_col(7), c1);
+    assert_eq!(gen.gen_with_input_col(7, false), c1);
     assert_ne!(f, gen.next_foot);
     assert_eq!(gen.next_foot_status().last_input_col, Some(6));
     assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
 
-    assert_eq!(gen.gen_with_input_col(6), c2);
+    assert_eq!(gen.gen_with_input_col(6, false), c2);
+    assert_eq!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+}
+
+#[test]
+fn preserve_input_repetitions_jump() {
+    let params = GeneratorParameters::default();
+    let mut gen = Generator::new(Style::HorizonDoubles, params);
+
+    let f = gen.next_foot;
+    let c1 = gen.gen_with_input_col(7, true);
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, None);
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+
+    assert_eq!(gen.gen_with_input_col(7, true), c1);
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, None);
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+
+    let c2 = gen.gen_with_input_col(6, true);
+    assert_eq!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+
+    assert_eq!(gen.gen_with_input_col(7, true), c1);
+    assert_ne!(f, gen.next_foot);
+    assert_eq!(gen.next_foot_status().last_input_col, Some(6));
+    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+
+    assert_eq!(gen.gen_with_input_col(6, true), c2);
     assert_eq!(f, gen.next_foot);
     assert_eq!(gen.next_foot_status().last_input_col, Some(7));
     assert_eq!(gen.prev_foot_status().last_input_col, Some(6));

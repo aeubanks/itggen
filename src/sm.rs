@@ -179,9 +179,10 @@ fn generate_notes(
     let mut gen = Generator::new(to_style, params);
     for l in &chart.notes_lines {
         if let Some(cols) = columns(&l, params.remove_jumps) {
+            let is_jump = cols.len() > 1;
             let mut out_cols = Vec::new();
             for col in cols {
-                let idx = gen.gen_with_input_col(col);
+                let idx = gen.gen_with_input_col(col, is_jump);
                 out_cols.push(idx);
             }
             ret.push_str(&row_notes(&out_cols, to_style));
@@ -794,6 +795,19 @@ fn test_generate() {
             true,
         );
         assert_eq!(g, Err("Couldn't parse chart: No STEPSTYPE".to_owned()));
+    }
+    {
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0110\n0110\n;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            false,
+        );
+        assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00011000\n00011000\n;\n".to_owned()))
     }
 }
 
