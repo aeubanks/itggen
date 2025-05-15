@@ -147,8 +147,8 @@ impl Style {
                 Foot::Right => 15,
             },
             Style::Quads => match foot {
-                Foot::Left => 7,
-                Foot::Right => 8,
+                Foot::Left => 9,
+                Foot::Right => 10,
             },
         }
     }
