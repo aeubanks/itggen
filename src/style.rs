@@ -16,6 +16,7 @@ pub enum Style {
     HorizonSingles,
     HorizonDoubles,
     HorizonTriples,
+    Quads,
 }
 
 #[derive(Debug)]
@@ -38,6 +39,7 @@ impl FromStr for Style {
             "horizon-singles" => Ok(Style::HorizonSingles),
             "horizon-doubles" => Ok(Style::HorizonDoubles),
             "horizon-triples" => Ok(Style::HorizonTriples),
+            "quads" => Ok(Style::Quads),
             _ => Err(StyleParseError(s.to_owned())),
         }
     }
@@ -64,6 +66,7 @@ impl Style {
             Style::HorizonSingles => 9,
             Style::HorizonDoubles => 18,
             Style::HorizonTriples => 27,
+            Style::Quads => 18,
         }
     }
 
@@ -89,6 +92,7 @@ impl Style {
             Style::HorizonSingles => "horizon-single",
             Style::HorizonDoubles => "horizon-double",
             Style::HorizonTriples => "horizon-triple",
+            Style::Quads => "quads",
         }
     }
 
@@ -142,6 +146,10 @@ impl Style {
                 Foot::Left => 9,
                 Foot::Right => 15,
             },
+            Style::Quads => match foot {
+                Foot::Left => 7,
+                Foot::Right => 8,
+            },
         }
     }
 
@@ -157,6 +165,7 @@ impl Style {
             Style::PumpHalfDoubles => 3.0,
             Style::PumpMiddleFour => 1.0,
             Style::PumpDoublesBrackets => 4.0,
+            Style::Quads => 11.0,
         }
     }
 
@@ -332,6 +341,28 @@ impl Style {
                 24 => Coord(8.0, 2.0),
                 25 => Coord(8.0, 1.0),
                 26 => Coord(8.0, 0.0),
+                _ => panic!(),
+            },
+            Style::Quads => match col {
+                0 => Coord(0.0, 0.2),
+                1 => Coord(0.0, 1.8),
+                2 => Coord(1.0, 1.0),
+                3 => Coord(2.0, 1.8),
+                4 => Coord(2.0, 0.2),
+                5 => Coord(3.0, 0.2),
+                6 => Coord(3.0, 1.8),
+                7 => Coord(4.0, 1.0),
+                8 => Coord(5.0, 1.8),
+                9 => Coord(5.0, 0.2),
+
+                10 => Coord(6.0, 1.0),
+                11 => Coord(7.0, 0.0),
+                12 => Coord(7.0, 2.0),
+                13 => Coord(8.0, 1.0),
+                14 => Coord(9.0, 1.0),
+                15 => Coord(10.0, 0.0),
+                16 => Coord(10.0, 2.0),
+                17 => Coord(11.0, 1.0),
                 _ => panic!(),
             },
         }
