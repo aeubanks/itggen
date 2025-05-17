@@ -17,6 +17,7 @@ pub enum Style {
     HorizonDoubles,
     HorizonTriples,
     Quads,
+    StupidQuads,
 }
 
 #[derive(Debug)]
@@ -40,6 +41,7 @@ impl FromStr for Style {
             "horizon-doubles" => Ok(Style::HorizonDoubles),
             "horizon-triples" => Ok(Style::HorizonTriples),
             "quads" => Ok(Style::Quads),
+            "stupid-quads" => Ok(Style::StupidQuads),
             _ => Err(StyleParseError(s.to_owned())),
         }
     }
@@ -67,6 +69,7 @@ impl Style {
             Style::HorizonDoubles => 18,
             Style::HorizonTriples => 27,
             Style::Quads => 18,
+            Style::StupidQuads => 18,
         }
     }
 
@@ -93,6 +96,7 @@ impl Style {
             Style::HorizonDoubles => "horizon-double",
             Style::HorizonTriples => "horizon-triple",
             Style::Quads => "quads",
+            Style::StupidQuads => "stupid-quads",
         }
     }
 
@@ -114,7 +118,7 @@ impl Style {
                 Foot::Left => 0,
                 Foot::Right => 4,
             },
-            Style::PumpDoubles => match foot {
+            Style::PumpDoubles | Style::StupidQuads => match foot {
                 Foot::Left => 4,
                 Foot::Right => 5,
             },
@@ -160,7 +164,9 @@ impl Style {
     pub fn max_x_coord(&self) -> f32 {
         match self {
             Style::ItgSingles | Style::PumpSingles | Style::HorizonSingles => 2.0,
-            Style::ItgDoubles | Style::PumpDoubles | Style::HorizonDoubles => 5.0,
+            Style::ItgDoubles | Style::PumpDoubles | Style::HorizonDoubles | Style::StupidQuads => {
+                5.0
+            }
             Style::ItgTriples | Style::PumpTriples | Style::HorizonTriples => 8.0,
             Style::PumpHalfDoubles => 3.0,
             Style::PumpMiddleFour => 1.0,
@@ -169,8 +175,23 @@ impl Style {
         }
     }
 
+    pub fn max_y_coord(&self) -> f32 {
+        match self {
+            Style::StupidQuads => 5.0,
+            _ => 2.0,
+        }
+    }
+
     pub fn center_x(&self) -> f32 {
         self.max_x_coord() / 2.0
+    }
+
+    pub fn center_y(&self) -> f32 {
+        self.max_y_coord() / 2.0
+    }
+
+    pub fn center(&self) -> Coord {
+        Coord(self.max_x_coord(), self.max_y_coord()) * 0.5
     }
 
     pub fn bar_coord(&self) -> Coord {
@@ -363,6 +384,28 @@ impl Style {
                 15 => Coord(10.0, 0.0),
                 16 => Coord(10.0, 2.0),
                 17 => Coord(11.0, 1.0),
+                _ => panic!(),
+            },
+            Style::StupidQuads => match col {
+                0 => Coord(0.0, 3.2),
+                1 => Coord(0.0, 4.8),
+                2 => Coord(1.0, 4.0),
+                3 => Coord(2.0, 4.8),
+                4 => Coord(2.0, 3.2),
+                5 => Coord(3.0, 3.2),
+                6 => Coord(3.0, 4.8),
+                7 => Coord(4.0, 4.0),
+                8 => Coord(5.0, 4.8),
+                9 => Coord(5.0, 3.2),
+
+                10 => Coord(0.0, 1.0),
+                11 => Coord(1.0, 0.0),
+                12 => Coord(1.0, 2.0),
+                13 => Coord(2.0, 1.0),
+                14 => Coord(3.0, 1.0),
+                15 => Coord(4.0, 0.0),
+                16 => Coord(4.0, 2.0),
+                17 => Coord(5.0, 1.0),
                 _ => panic!(),
             },
         }

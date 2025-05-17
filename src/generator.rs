@@ -1,3 +1,4 @@
+use crate::coord::Coord;
 use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
@@ -51,8 +52,8 @@ struct FootStatus {
 
 #[derive(Debug, Copy, Clone)]
 struct Zone {
-    start_x: f32,
-    end_x: f32,
+    start: Coord,
+    end: Coord,
     total_move_steps: i32,
     steps_until_end: i32,
 }
@@ -66,37 +67,37 @@ impl Zone {
         self.steps_until_end <= 0
     }
 
-    fn current_x(&self) -> f32 {
+    fn current(&self) -> Coord {
         let ratio =
             (self.total_move_steps - self.steps_until_end) as f32 / self.total_move_steps as f32;
-        self.start_x + (self.end_x - self.start_x) * ratio
+        self.start + (self.end - self.start) * ratio
     }
 }
 
 #[test]
 fn test_zone() {
     let mut z = Zone {
-        start_x: 1.0,
-        end_x: 7.0,
+        start: Coord(1.0, 0.0),
+        end: Coord(7.0, 0.0),
         total_move_steps: 6,
         steps_until_end: 6,
     };
     assert!(!z.is_done());
-    assert_eq!(z.current_x(), 1.0);
+    assert_eq!(z.current().0, 1.0);
     z.step();
-    assert_eq!(z.current_x(), 2.0);
+    assert_eq!(z.current().0, 2.0);
     z.step();
-    assert_eq!(z.current_x(), 3.0);
+    assert_eq!(z.current().0, 3.0);
     z.step();
-    assert_eq!(z.current_x(), 4.0);
+    assert_eq!(z.current().0, 4.0);
     z.step();
-    assert_eq!(z.current_x(), 5.0);
+    assert_eq!(z.current().0, 5.0);
     z.step();
     assert!(!z.is_done());
-    assert_eq!(z.current_x(), 6.0);
+    assert_eq!(z.current().0, 6.0);
     z.step();
     assert!(z.is_done());
-    assert_eq!(z.current_x(), 7.0);
+    assert_eq!(z.current().0, 7.0);
 }
 
 pub struct Generator {
@@ -119,7 +120,7 @@ impl Generator {
         let zone = Self::rand_zone(
             &mut rand,
             style,
-            style.init_pos().0,
+            style.init_pos(),
             params.doubles_dist_from_side,
             params.doubles_steps_per_dist,
         );
@@ -258,7 +259,7 @@ impl Generator {
         Self::rand_zone(
             &mut self.rand,
             self.style,
-            self.zone.end_x,
+            self.zone.end,
             self.params.doubles_dist_from_side,
             self.params.doubles_steps_per_dist,
         )
@@ -267,33 +268,55 @@ impl Generator {
     fn rand_zone(
         rand: &mut StdRng,
         style: Style,
-        prev_x: f32,
+        prev: Coord,
         override_dist_from_edge: Option<f32>,
         override_steps_per_dist: Option<f32>,
     ) -> Zone {
         let dist_from_edge = override_dist_from_edge.unwrap_or(0.5);
-        let max = style.max_x_coord() - dist_from_edge;
-        if dist_from_edge >= max {
+        let max_x = style.max_x_coord() - dist_from_edge;
+        let max_y = style.max_y_coord() - dist_from_edge;
+        if dist_from_edge >= max_x {
             // if interval is empty or trivial, default to center
             return Zone {
-                start_x: prev_x,
-                end_x: style.center_x(),
+                start: prev,
+                end: style.center(),
                 total_move_steps: 1,
                 steps_until_end: 1,
             };
         }
-        let x_dest = if prev_x < style.center_x() {
-            max
-        } else {
-            dist_from_edge
+        let (move_x, move_y) = match rand.gen_range(0..3) {
+            0 => (true, false),
+            1 => (false, true),
+            2 => (true, true),
+            _ => unreachable!(),
         };
+        let dest = Coord(
+            if move_x {
+                if prev.0 < style.center_x() {
+                    max_x
+                } else {
+                    dist_from_edge
+                }
+            } else {
+                prev.0
+            },
+            if move_y {
+                if prev.1 < style.center_y() {
+                    max_y
+                } else {
+                    dist_from_edge
+                }
+            } else {
+                prev.1
+            },
+        );
 
-        let dist = (x_dest - prev_x).abs();
+        let dist = dest.dist(prev);
         let steps_per_dist = override_steps_per_dist.unwrap_or_else(|| rand.gen_range(12.0..16.0));
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
-            start_x: prev_x,
-            end_x: x_dest,
+            start: prev,
+            end: dest,
             total_move_steps: move_steps,
             steps_until_end: move_steps,
         }
@@ -607,17 +630,20 @@ impl Generator {
             }
         }
         if let Some((dist, decay)) = self.params.doubles_movement {
-            let zone_x = self.zone.current_x()
-                + if self.params.doubles_track_individual_feet {
-                    match self.next_foot {
-                        Foot::Left => -0.5,
-                        Foot::Right => 0.5,
-                    }
-                } else {
-                    0.0
-                };
+            let zone = self.zone.current()
+                + Coord(
+                    if self.params.doubles_track_individual_feet {
+                        match self.next_foot {
+                            Foot::Left => -0.5,
+                            Foot::Right => 0.5,
+                        }
+                    } else {
+                        0.0
+                    },
+                    0.0,
+                );
             let cur_coord = self.style.coord(col);
-            let over_dist = (zone_x - cur_coord.0).abs() - dist;
+            let over_dist = cur_coord.dist(zone) - dist;
             if over_dist > 0.0 {
                 prob *= decay.powf(over_dist);
             }
