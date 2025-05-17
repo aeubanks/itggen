@@ -297,10 +297,13 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
                     style = Some(cur_val_lines.pop().unwrap());
                 }
                 "DESCRIPTION" => {
-                    if cur_val_lines.len() != 1 {
+                    if cur_val_lines.len() == 0 {
+                        description = Some("".to_owned());
+                    } else if cur_val_lines.len() == 1 {
+                        description = Some(cur_val_lines.pop().unwrap());
+                    } else {
                         return Err("DESCRIPTION should be one line".to_owned());
                     }
-                    description = Some(cur_val_lines.pop().unwrap());
                 }
                 "DIFFICULTY" => {
                     if cur_val_lines.len() != 1 {
@@ -782,6 +785,19 @@ fn test_generate() {
             true,
         );
         assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG - wow;\n#DIFFICULTY:Challenge;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
+    }
+    {
+        let orig = "A\n#NOTEDATA:;\n#STEPSTYPE:dance-single;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:;\n#NOTES:\n0000\n;\n#METER:13;\n".to_owned();
+        let g = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            true,
+        );
+        assert_eq!(g, Ok("#NOTEDATA:;\n#STEPSTYPE:dance-double;\n#DESCRIPTION:AYEAG;\n#DIFFICULTY:Challenge;\n#METER:13;\n#NOTES:\n00000000\n;\n".to_owned()))
     }
     {
         let orig = "A\n#NOTEDATA:;\n#DIFFICULTY:Challenge;\n#DESCRIPTION:wow;\n#METER:13;\n#NOTES:\n0000\n;".to_owned();
