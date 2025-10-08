@@ -170,12 +170,22 @@ fn row_notes(cols: &[i8], style: Style) -> String {
     ret
 }
 
+fn chart_hash(chart: &SMChart) -> u64 {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut s = DefaultHasher::new();
+    chart.notes_lines.hash(&mut s);
+    s.finish()
+}
+
 fn generate_notes(
     chart: &SMChart,
     to_style: Style,
-    params: GeneratorParameters,
+    mut params: GeneratorParameters,
 ) -> Result<String, String> {
     let mut ret = String::new();
+    if params.seed.is_none() {
+        params.seed = Some(chart_hash(chart));
+    }
     let mut gen = Generator::new(to_style, params);
     for l in &chart.notes_lines {
         if let Some(cols) = columns(&l, params.remove_jumps) {
@@ -824,6 +834,29 @@ fn test_generate() {
             false,
         );
         assert_eq!(g, Ok("#NOTES:\n     dance-double:\n     AYEAG - Zaia:\n     Challenge:\n     17:\n     :\n00011000\n00011000\n;\n".to_owned()))
+    }
+    {
+        // check that
+        let orig = "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n0010\n0110\n0000\n1000\n;\n".to_owned();
+        let g1 = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            false,
+        );
+        let g2 = generate(
+            &orig,
+            Style::ItgSingles,
+            Style::ItgDoubles,
+            params,
+            false,
+            None,
+            false,
+        );
+        assert_eq!(g1, g2);
     }
 }
 
