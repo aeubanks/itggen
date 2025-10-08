@@ -92,7 +92,7 @@ fn write_sm_chart(
     edit: bool,
     extra_description: Option<&String>,
     should_write_from_difficulty: bool,
-    generated_notes: &String,
+    generated_notes: &str,
 ) -> String {
     let mut ret = String::new();
     ret.push_str("#NOTES:\n");
@@ -121,7 +121,7 @@ fn write_ssc_chart(
     edit: bool,
     extra_description: Option<&String>,
     should_write_from_difficulty: bool,
-    generated_notes: &String,
+    generated_notes: &str,
 ) -> String {
     let mut ret = String::new();
 
@@ -188,7 +188,7 @@ fn generate_notes(
     }
     let mut gen = Generator::new(to_style, params);
     for l in &chart.notes_lines {
-        if let Some(cols) = columns(&l, params.remove_jumps) {
+        if let Some(cols) = columns(l, params.remove_jumps) {
             let is_jump = cols.len() > 1;
             let mut out_cols = Vec::new();
             for col in cols {
@@ -199,7 +199,7 @@ fn generate_notes(
             ret.push('\n');
         } else if l == "," || l == ";" {
             ret.push_str(l);
-            ret.push_str("\n");
+            ret.push('\n');
         } else {
             return Err(format!("unknown notes line: {}", l));
         }
@@ -259,8 +259,8 @@ fn parse_sm_chart(contents: &str) -> Result<SMChart, String> {
 fn parse_sm_charts(contents: &str) -> Result<Vec<SMChart>, String> {
     let mut ret = Vec::new();
     let mut search_from = 0;
-    while let Some(notes_idx) = find_start_at(&contents, search_from, "#NOTES:") {
-        let semicolon_idx = find_start_at(&contents, notes_idx, ";")
+    while let Some(notes_idx) = find_start_at(contents, search_from, "#NOTES:") {
+        let semicolon_idx = find_start_at(contents, notes_idx, ";")
             .ok_or("couldn't find semicolon after #NOTES".to_owned())?;
         let notes_str = &contents[notes_idx..=semicolon_idx];
         let chart =
@@ -291,7 +291,7 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
             cur_key = key.to_owned();
             line = val[1..].to_owned();
         }
-        new_kv = line.chars().last() == Some(';');
+        new_kv = line.ends_with(';');
         if new_kv {
             line.pop();
         }
@@ -307,7 +307,7 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
                     style = Some(cur_val_lines.pop().unwrap());
                 }
                 "DESCRIPTION" => {
-                    if cur_val_lines.len() == 0 {
+                    if cur_val_lines.is_empty() {
                         description = Some("".to_owned());
                     } else if cur_val_lines.len() == 1 {
                         description = Some(cur_val_lines.pop().unwrap());
@@ -356,14 +356,14 @@ fn parse_ssc_chart(contents: &str) -> Result<SMChart, String> {
 
 fn parse_ssc_charts(contents: &str) -> Result<Vec<SMChart>, String> {
     let mut ret = Vec::new();
-    let mut notedata_idx = match find_start_at(&contents, 0, "#NOTEDATA:") {
+    let mut notedata_idx = match find_start_at(contents, 0, "#NOTEDATA:") {
         Some(i) => i,
         None => {
             return Ok(Vec::new());
         }
     };
     loop {
-        match find_start_at(&contents, notedata_idx + 1, "#NOTEDATA:") {
+        match find_start_at(contents, notedata_idx + 1, "#NOTEDATA:") {
             Some(next_notedata) => {
                 let chart_str = &contents[notedata_idx..next_notedata];
                 let chart = parse_ssc_chart(chart_str)
@@ -423,14 +423,14 @@ pub fn generate(
         charts.push(chart);
     }
     for chart in &charts {
-        let generated_notes = generate_notes(&chart, to_style, params)?;
+        let generated_notes = generate_notes(chart, to_style, params)?;
         let write_fn = if is_ssc {
             write_ssc_chart
         } else {
             write_sm_chart
         };
         ret.push_str(&write_fn(
-            &chart,
+            chart,
             to_style,
             params,
             edit,
@@ -871,11 +871,11 @@ pub fn remove_existing_autogen(contents: &str, is_ssc: bool) -> String {
             continue;
         }
         if !split.contains("AYEAG") {
-            res.push_str(&separator);
+            res.push_str(separator);
             res.push_str(split);
         }
     }
-    return res;
+    res
 }
 
 #[test]

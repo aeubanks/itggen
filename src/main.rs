@@ -76,26 +76,24 @@ struct Opts {
 }
 
 fn sm_ssc_files(path: &Path) -> Vec<(PathBuf, bool)> {
-    let rd = match std::fs::read_dir(&path) {
+    let rd = match std::fs::read_dir(path) {
         Ok(rd) => rd,
         Err(_) => {
             return vec![];
         }
     };
     let mut ret = Vec::new();
-    for de in rd {
-        if let Ok(de) = de {
-            if let Ok(t) = de.file_type() {
-                if t.is_dir() {
-                    ret.append(&mut sm_ssc_files(&de.path()));
-                } else if t.is_file() {
-                    let p = de.path();
-                    if let Some(Some(ext)) = p.extension().map(|e| e.to_str()) {
-                        if ext.to_lowercase() == "sm" {
-                            ret.push((de.path(), false));
-                        } else if ext.to_lowercase() == "ssc" {
-                            ret.push((de.path(), true));
-                        }
+    for de in rd.flatten() {
+        if let Ok(t) = de.file_type() {
+            if t.is_dir() {
+                ret.append(&mut sm_ssc_files(&de.path()));
+            } else if t.is_file() {
+                let p = de.path();
+                if let Some(Some(ext)) = p.extension().map(|e| e.to_str()) {
+                    if ext.to_lowercase() == "sm" {
+                        ret.push((de.path(), false));
+                    } else if ext.to_lowercase() == "ssc" {
+                        ret.push((de.path(), true));
                     }
                 }
             }
@@ -191,7 +189,7 @@ fn create_params(
 fn main() -> std::io::Result<()> {
     let opts = Opts::from_args();
 
-    let files: Vec<(PathBuf, bool)> = opts.inputs.iter().flat_map(|i| sm_ssc_files(&i)).collect();
+    let files: Vec<(PathBuf, bool)> = opts.inputs.iter().flat_map(|i| sm_ssc_files(i)).collect();
 
     if files.is_empty() {
         println!("no input files...");

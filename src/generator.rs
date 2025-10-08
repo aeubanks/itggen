@@ -113,8 +113,8 @@ impl Generator {
     pub fn new(style: Style, params: GeneratorParameters) -> Self {
         let mut rand = params
             .seed
-            .map(|s| StdRng::seed_from_u64(s))
-            .unwrap_or_else(|| StdRng::from_os_rng());
+            .map(StdRng::seed_from_u64)
+            .unwrap_or_else(StdRng::from_os_rng);
         let next_foot = if rand.random() {
             Foot::Left
         } else {
@@ -163,12 +163,11 @@ impl Generator {
     }
 
     fn gen_impl(&mut self, input_col: i8) -> i8 {
-        let col;
-        if self.next_foot_status().last_col.is_none() {
-            col = self.style.init_col(self.next_foot);
+        let col = if self.next_foot_status().last_col.is_none() {
+            self.style.init_col(self.next_foot)
         } else {
-            col = self.choose(input_col);
-        }
+            self.choose(input_col)
+        };
         self.step_impl(col, input_col, true);
         col
     }
@@ -404,10 +403,8 @@ impl Generator {
             if let Some(prev_col) = self.prev_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                if prev_coord.dist(cur_coord) > md + Self::EPSILON {
-                    if self.test_crossover(col) {
-                        return false;
-                    }
+                if prev_coord.dist(cur_coord) > md + Self::EPSILON && self.test_crossover(col) {
+                    return false;
                 }
             }
         }
@@ -433,10 +430,10 @@ impl Generator {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let cur_coord = self.style.coord(col);
-                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON {
-                    if self.test_crossover(col) {
-                        return false;
-                    }
+                if (prev_coord.0 - cur_coord.0).abs() > md + Self::EPSILON
+                    && self.test_crossover(col)
+                {
+                    return false;
                 }
             }
         }
