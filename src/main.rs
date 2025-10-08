@@ -260,9 +260,9 @@ fn test_params() {
     let mut chart =
         "A\n#NOTES:\n     dance-single:\n     Zaia:\n     Challenge:\n     17:\n     useless:\n"
             .to_owned();
-    let mut rng = StdRng::from_entropy();
+    let mut rng = StdRng::from_os_rng();
     for _ in 0..500 {
-        chart.push_str(match rng.gen_range(0..4) {
+        chart.push_str(match rng.random_range(0..4) {
             0 => "1000",
             1 => "0100",
             2 => "0010",

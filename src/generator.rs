@@ -114,8 +114,12 @@ impl Generator {
         let mut rand = params
             .seed
             .map(|s| StdRng::seed_from_u64(s))
-            .unwrap_or_else(|| StdRng::from_entropy());
-        let next_foot = if rand.gen() { Foot::Left } else { Foot::Right };
+            .unwrap_or_else(|| StdRng::from_os_rng());
+        let next_foot = if rand.random() {
+            Foot::Left
+        } else {
+            Foot::Right
+        };
         let zone = Self::rand_zone(
             &mut rand,
             style,
@@ -191,7 +195,7 @@ impl Generator {
     fn choose_from_probs(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
         let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
         assert!(total_prob != 0.0, "All valid columns have probability 0.0");
-        let prob_remaining = self.rand.gen_range(0.0..total_prob);
+        let prob_remaining = self.rand.random_range(0.0..total_prob);
         Self::choose_from_probs_with_prob(col_probs, prob_remaining)
     }
 
@@ -289,7 +293,8 @@ impl Generator {
         };
 
         let dist = (x_dest - prev_x).abs();
-        let steps_per_dist = override_steps_per_dist.unwrap_or_else(|| rand.gen_range(12.0..16.0));
+        let steps_per_dist =
+            override_steps_per_dist.unwrap_or_else(|| rand.random_range(12.0..16.0));
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start_x: prev_x,
@@ -302,7 +307,7 @@ impl Generator {
 
 #[test]
 fn test_rand_zone() {
-    let mut rand = StdRng::from_entropy();
+    let mut rand = StdRng::from_os_rng();
     let style = Style::ItgDoubles;
     assert!(Generator::rand_zone(&mut rand, style, 4.0, None, None).end_x <= style.center_x());
     assert!(Generator::rand_zone(&mut rand, style, 2.0, None, None).end_x >= style.center_x());
