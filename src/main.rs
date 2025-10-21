@@ -123,7 +123,11 @@ fn create_params(
         } else {
             Some((1, 0.1))
         },
-        other_foot_repeat_decay: Some(0.3),
+        other_foot_repeat_decay: if preserve_input_repetitions {
+            None
+        } else {
+            Some(0.3)
+        },
         max_dist_between_feet: Some(if to_style == Style::PumpDoublesBrackets {
             3.9
         } else {
@@ -132,7 +136,7 @@ fn create_params(
         max_dist_between_feet_if_crossover: Some(2.5),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(if has_crossovers || vroom { 2.9 } else { 2.1 }),
-        dist_between_steps_decay: Some((1.5, 0.3)),
+        dist_between_steps_decay: Some((2.5, 0.3)),
         max_horizontal_dist_between_steps: if has_crossovers || vroom {
             None
         } else {
@@ -147,18 +151,16 @@ fn create_params(
         max_vertical_dist_between_steps: None,
         vertical_dist_between_steps_decay: None,
         horizontal_dist_between_3_steps_same_foot_decay: None,
-        max_horizontal_dist_between_4_steps_both_feet: if has_crossovers
-            || preserve_input_repetitions
-            || vroom
-        {
+        max_horizontal_dist_between_4_steps_both_feet: if has_crossovers || vroom {
             None
         } else {
             Some(2.5)
         },
-        horizontal_dist_between_3_steps_decay: Some((
-            1.0,
-            if has_crossovers || vroom { 0.4 } else { 0.3 },
-        )),
+        max_horizontal_dist_between_3_steps_same_foot: if has_crossovers || vroom {
+            None
+        } else {
+            Some(1.5)
+        },
         max_angle: Some(PI * (0.5 + 0.3 * (crossovers as f32))),
         angle_decay: None,
         max_turn: Some(if crossovers > 1 { PI } else { PI * 3.0 / 4.0 }),
@@ -169,13 +171,13 @@ fn create_params(
             None
         },
         max_bar_angle: None,
-        bar_angle_decay: Some((0.0, if has_crossovers || vroom { 0.4 } else { 0.2 })),
+        bar_angle_decay: Some((0.0, if has_crossovers || vroom { 0.4 } else { 0.9 })),
         preserve_input_repetitions: if preserve_input_repetitions {
-            Some(if has_crossovers { 0.001 } else { 0.0 })
+            Some(0.01)
         } else {
             None
         },
-        doubles_movement: Some((0.5, 0.02)),
+        doubles_movement: Some((0.5, 0.002)),
         doubles_dist_from_side: if vroom { Some(0.0) } else { None },
         doubles_steps_per_dist: if vroom { Some(2.5) } else { None },
         doubles_track_individual_feet: !vroom && !has_crossovers,

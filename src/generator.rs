@@ -2,6 +2,7 @@ use crate::foot::Foot;
 use crate::style::Style;
 use rand::prelude::*;
 use std::f32::consts::PI;
+use std::fmt::Debug;
 
 #[derive(Copy, Clone, Default, Debug)]
 pub struct GeneratorParameters {
@@ -22,7 +23,7 @@ pub struct GeneratorParameters {
     pub vertical_dist_between_steps_decay: Option<(f32, f32)>,
     pub horizontal_dist_between_3_steps_same_foot_decay: Option<(f32, f32)>,
     pub max_horizontal_dist_between_4_steps_both_feet: Option<f32>,
-    pub horizontal_dist_between_3_steps_decay: Option<(f32, f32)>,
+    pub max_horizontal_dist_between_3_steps_same_foot: Option<f32>,
     pub max_angle: Option<f32>,
     pub angle_decay: Option<(f32, f32)>,
     pub max_turn: Option<f32>,
@@ -109,6 +110,19 @@ pub struct Generator {
     zone: Zone,
 }
 
+impl Debug for Generator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Generator")
+            .field("style", &self.style)
+            .field("params", &self.params)
+            .field("feet_status", &self.feet_status)
+            .field("next_foot", &self.next_foot)
+            .field("prev_angle", &self.prev_angle)
+            .field("zone", &self.zone)
+            .finish()
+    }
+}
+
 impl Generator {
     pub fn new(style: Style, params: GeneratorParameters) -> Self {
         let mut rand = params
@@ -121,7 +135,6 @@ impl Generator {
             Foot::Right
         };
         let zone = Self::rand_zone(
-            &mut rand,
             style,
             style.init_pos().0,
             params.doubles_dist_from_side,
@@ -186,6 +199,7 @@ impl Generator {
             .filter(|c| self.is_valid_col(*c))
             .collect();
         if cols.is_empty() {
+            println!("{:?}", self);
             panic!("no available columns!");
         }
         cols
@@ -193,7 +207,10 @@ impl Generator {
 
     fn choose_from_probs(&mut self, col_probs: Vec<(i8, f32)>) -> i8 {
         let total_prob: f32 = col_probs.iter().map(|(_, p)| p).sum();
-        assert!(total_prob != 0.0, "All valid columns have probability 0.0");
+        if total_prob == 0.0 {
+            println!("{:?}", self);
+            panic!("All valid columns have probability 0.0");
+        }
         let prob_remaining = self.rand.random_range(0.0..total_prob);
         Self::choose_from_probs_with_prob(col_probs, prob_remaining)
     }
@@ -259,7 +276,6 @@ impl Generator {
 
     fn next_zone(&mut self) -> Zone {
         Self::rand_zone(
-            &mut self.rand,
             self.style,
             self.zone.end_x,
             self.params.doubles_dist_from_side,
@@ -268,7 +284,6 @@ impl Generator {
     }
 
     fn rand_zone(
-        rand: &mut StdRng,
         style: Style,
         prev_x: f32,
         override_dist_from_edge: Option<f32>,
@@ -292,8 +307,7 @@ impl Generator {
         };
 
         let dist = (x_dest - prev_x).abs();
-        let steps_per_dist =
-            override_steps_per_dist.unwrap_or_else(|| rand.random_range(12.0..16.0));
+        let steps_per_dist = override_steps_per_dist.unwrap_or(12.0);
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start_x: prev_x,
@@ -306,10 +320,9 @@ impl Generator {
 
 #[test]
 fn test_rand_zone() {
-    let mut rand = StdRng::from_os_rng();
     let style = Style::ItgDoubles;
-    assert!(Generator::rand_zone(&mut rand, style, 4.0, None, None).end_x <= style.center_x());
-    assert!(Generator::rand_zone(&mut rand, style, 2.0, None, None).end_x >= style.center_x());
+    assert!(Generator::rand_zone(style, 4.0, None, None).end_x <= style.center_x());
+    assert!(Generator::rand_zone(style, 2.0, None, None).end_x >= style.center_x());
 }
 
 impl Generator {
@@ -455,6 +468,16 @@ impl Generator {
                 }
             }
         }
+        if let Some(dist) = self.params.max_horizontal_dist_between_3_steps_same_foot {
+            if let Some(prev_col) = self.next_foot_status().last_last_col {
+                let cur_coord = self.style.coord(col);
+                let prev_coord = self.style.coord(prev_col);
+                let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
+                if over_dist > 0.0 {
+                    return false;
+                }
+            }
+        }
         if let Some(ma) = self.params.max_angle {
             if let Some(a) = self.test_angle(col) {
                 if a.abs() > ma + Self::EPSILON {
@@ -547,15 +570,6 @@ impl Generator {
             if let Some(prev_col) = self.next_foot_status().last_col {
                 let prev_coord = self.style.coord(prev_col);
                 let over_dist = (prev_coord.1 - cur_coord.1).abs() - dist;
-                if over_dist > 0.0 {
-                    prob *= decay.powf(over_dist);
-                }
-            }
-        }
-        if let Some((dist, decay)) = self.params.horizontal_dist_between_3_steps_decay {
-            if let Some(prev_col) = self.next_foot_status().last_last_col {
-                let prev_coord = self.style.coord(prev_col);
-                let over_dist = (prev_coord.0 - cur_coord.0).abs() - dist;
                 if over_dist > 0.0 {
                     prob *= decay.powf(over_dist);
                 }
@@ -931,6 +945,25 @@ fn valid_steps() {
         g.next_foot = Foot::Right;
         assert_eq!(g.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
     }
+    // horizontal dist between 3 foot steps
+    {
+        let mut params = GeneratorParameters::default();
+        params.max_horizontal_dist_between_3_steps_same_foot = Some(1.0);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(2);
+        g.step(8);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        g.step(5);
+        g.step(8);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
+        g.step(6);
+        g.step(8);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        g.step(5);
+        g.step(8);
+        assert_eq!(g.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
+    }
 }
 
 #[test]
@@ -1055,57 +1088,6 @@ fn steps_prob() {
         assert_eq!(g.prob(4), 1.0);
         assert_eq!(g.prob(5), 0.5);
         assert_eq!(g.prob(6), 0.5);
-        assert_eq!(g.prob(7), 1.0);
-        assert_eq!(g.prob(8), 1.0);
-    }
-    // horizontal dist between 3 foot steps decay
-    {
-        let mut params = GeneratorParameters::default();
-        params.horizontal_dist_between_3_steps_decay = Some((1.0, 0.5));
-        let mut g = Generator::new(Style::HorizonSingles, params);
-        g.next_foot = Foot::Left;
-        g.step(2);
-        g.step(8);
-        assert_eq!(g.prob(0), 1.0);
-        assert_eq!(g.prob(1), 1.0);
-        assert_eq!(g.prob(2), 1.0);
-        assert_eq!(g.prob(3), 1.0);
-        assert_eq!(g.prob(4), 1.0);
-        assert_eq!(g.prob(5), 1.0);
-        assert_eq!(g.prob(6), 1.0);
-        assert_eq!(g.prob(7), 1.0);
-        assert_eq!(g.prob(8), 1.0);
-        g.step(5);
-        g.step(8);
-        assert_eq!(g.prob(0), 1.0);
-        assert_eq!(g.prob(1), 1.0);
-        assert_eq!(g.prob(2), 1.0);
-        assert_eq!(g.prob(3), 1.0);
-        assert_eq!(g.prob(4), 1.0);
-        assert_eq!(g.prob(5), 1.0);
-        assert_eq!(g.prob(6), 0.5);
-        assert_eq!(g.prob(7), 0.5);
-        assert_eq!(g.prob(8), 0.5);
-        g.step(6);
-        g.step(8);
-        assert_eq!(g.prob(0), 1.0);
-        assert_eq!(g.prob(1), 1.0);
-        assert_eq!(g.prob(2), 1.0);
-        assert_eq!(g.prob(3), 1.0);
-        assert_eq!(g.prob(4), 1.0);
-        assert_eq!(g.prob(5), 1.0);
-        assert_eq!(g.prob(6), 1.0);
-        assert_eq!(g.prob(7), 1.0);
-        assert_eq!(g.prob(8), 1.0);
-        g.step(5);
-        g.step(8);
-        assert_eq!(g.prob(0), 0.5);
-        assert_eq!(g.prob(1), 0.5);
-        assert_eq!(g.prob(2), 0.5);
-        assert_eq!(g.prob(3), 1.0);
-        assert_eq!(g.prob(4), 1.0);
-        assert_eq!(g.prob(5), 1.0);
-        assert_eq!(g.prob(6), 1.0);
         assert_eq!(g.prob(7), 1.0);
         assert_eq!(g.prob(8), 1.0);
     }
