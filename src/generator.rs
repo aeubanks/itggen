@@ -141,11 +141,11 @@ impl Generator {
 
 impl Generator {
     #[cfg(test)]
-    pub fn gen(&mut self) -> i8 {
-        self.gen_with_input_col(-1, false)
+    pub fn generate(&mut self) -> i8 {
+        self.generate_with_input_col(-1, false)
     }
 
-    pub fn gen_with_input_col(&mut self, input_col: i8, is_jump: bool) -> i8 {
+    pub fn generate_with_input_col(&mut self, input_col: i8, is_jump: bool) -> i8 {
         if self.params.preserve_input_repetitions.is_some() || is_jump {
             if self.next_foot_status().last_input_col == Some(input_col) {
                 if let Some(lc) = self.next_foot_status().last_col {
@@ -646,103 +646,103 @@ fn test_choose_from_probs_with_prob() {
 
 #[test]
 fn sanity() {
-    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+    let mut g = Generator::new(Style::ItgSingles, GeneratorParameters::default());
     for _ in 0..100 {
-        let _ = gen.gen();
+        let _ = g.generate();
     }
 }
 
 #[test]
 fn first_steps() {
     {
-        let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
-        gen.next_foot = Foot::Left;
-        assert_eq!(gen.gen(), 0);
-        assert_eq!(gen.gen(), 3);
+        let mut g = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+        g.next_foot = Foot::Left;
+        assert_eq!(g.generate(), 0);
+        assert_eq!(g.generate(), 3);
     }
     {
-        let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
-        gen.next_foot = Foot::Right;
-        assert_eq!(gen.gen(), 3);
-        assert_eq!(gen.gen(), 0);
+        let mut g = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+        g.next_foot = Foot::Right;
+        assert_eq!(g.generate(), 3);
+        assert_eq!(g.generate(), 0);
     }
 }
 
 #[test]
 fn state() {
-    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
-    let f = gen.next_foot;
-    assert_eq!(gen.next_foot_status().last_col, None);
-    assert_eq!(gen.prev_foot_status().last_col, None);
-    let c = gen.gen();
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_col, None);
-    assert_eq!(gen.prev_foot_status().last_col, Some(c));
+    let mut g = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+    let f = g.next_foot;
+    assert_eq!(g.next_foot_status().last_col, None);
+    assert_eq!(g.prev_foot_status().last_col, None);
+    let c = g.generate();
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_col, None);
+    assert_eq!(g.prev_foot_status().last_col, Some(c));
 }
 
 #[test]
 fn preserve_input_repetitions() {
     let mut params = GeneratorParameters::default();
     params.preserve_input_repetitions = Some(1.0);
-    let mut gen = Generator::new(Style::HorizonDoubles, params);
+    let mut g = Generator::new(Style::HorizonDoubles, params);
 
-    let f = gen.next_foot;
-    let c1 = gen.gen_with_input_col(7, false);
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, None);
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+    let f = g.next_foot;
+    let c1 = g.generate_with_input_col(7, false);
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, None);
+    assert_eq!(g.prev_foot_status().last_input_col, Some(7));
 
-    assert_eq!(gen.gen_with_input_col(7, false), c1);
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, None);
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+    assert_eq!(g.generate_with_input_col(7, false), c1);
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, None);
+    assert_eq!(g.prev_foot_status().last_input_col, Some(7));
 
-    let c2 = gen.gen_with_input_col(6, false);
-    assert_eq!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+    let c2 = g.generate_with_input_col(6, false);
+    assert_eq!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, Some(7));
+    assert_eq!(g.prev_foot_status().last_input_col, Some(6));
 
-    assert_eq!(gen.gen_with_input_col(7, false), c1);
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, Some(6));
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+    assert_eq!(g.generate_with_input_col(7, false), c1);
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, Some(6));
+    assert_eq!(g.prev_foot_status().last_input_col, Some(7));
 
-    assert_eq!(gen.gen_with_input_col(6, false), c2);
-    assert_eq!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+    assert_eq!(g.generate_with_input_col(6, false), c2);
+    assert_eq!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, Some(7));
+    assert_eq!(g.prev_foot_status().last_input_col, Some(6));
 }
 
 #[test]
 fn preserve_input_repetitions_jump() {
     let params = GeneratorParameters::default();
-    let mut gen = Generator::new(Style::HorizonDoubles, params);
+    let mut g = Generator::new(Style::HorizonDoubles, params);
 
-    let f = gen.next_foot;
-    let c1 = gen.gen_with_input_col(7, true);
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, None);
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+    let f = g.next_foot;
+    let c1 = g.generate_with_input_col(7, true);
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, None);
+    assert_eq!(g.prev_foot_status().last_input_col, Some(7));
 
-    assert_eq!(gen.gen_with_input_col(7, true), c1);
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, None);
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+    assert_eq!(g.generate_with_input_col(7, true), c1);
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, None);
+    assert_eq!(g.prev_foot_status().last_input_col, Some(7));
 
-    let c2 = gen.gen_with_input_col(6, true);
-    assert_eq!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+    let c2 = g.generate_with_input_col(6, true);
+    assert_eq!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, Some(7));
+    assert_eq!(g.prev_foot_status().last_input_col, Some(6));
 
-    assert_eq!(gen.gen_with_input_col(7, true), c1);
-    assert_ne!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, Some(6));
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(7));
+    assert_eq!(g.generate_with_input_col(7, true), c1);
+    assert_ne!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, Some(6));
+    assert_eq!(g.prev_foot_status().last_input_col, Some(7));
 
-    assert_eq!(gen.gen_with_input_col(6, true), c2);
-    assert_eq!(f, gen.next_foot);
-    assert_eq!(gen.next_foot_status().last_input_col, Some(7));
-    assert_eq!(gen.prev_foot_status().last_input_col, Some(6));
+    assert_eq!(g.generate_with_input_col(6, true), c2);
+    assert_eq!(f, g.next_foot);
+    assert_eq!(g.next_foot_status().last_input_col, Some(7));
+    assert_eq!(g.prev_foot_status().last_input_col, Some(6));
 }
 
 #[test]
@@ -761,178 +761,175 @@ fn valid_steps() {
             Style::HorizonTriples,
         ] {
             let params = GeneratorParameters::default();
-            let gen = Generator::new(*style, params);
-            assert_eq!(
-                gen.valid_cols(),
-                (0..(style.num_cols())).collect::<Vec<i8>>()
-            );
+            let g = Generator::new(*style, params);
+            assert_eq!(g.valid_cols(), (0..(style.num_cols())).collect::<Vec<i8>>());
         }
     }
     // no footswitches
     {
         let mut params = GeneratorParameters::default();
         params.disallow_footswitch = true;
-        let mut gen = Generator::new(Style::ItgSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(0);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
+        let mut g = Generator::new(Style::ItgSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(0);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2]);
     }
     // no footswitches pump brackets
     {
         let mut params = GeneratorParameters::default();
         params.disallow_footswitch = true;
-        let mut gen = Generator::new(Style::PumpDoublesBrackets, params);
-        gen.next_foot = Foot::Left;
-        gen.step(3);
-        gen.step(6);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 5]);
+        let mut g = Generator::new(Style::PumpDoublesBrackets, params);
+        g.next_foot = Foot::Left;
+        g.step(3);
+        g.step(6);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 5]);
     }
     // max repeated
     {
         let mut params = GeneratorParameters::default();
         params.max_repeated = Some(2);
-        let mut gen = Generator::new(Style::ItgSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(0);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
-        gen.step(0);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![1, 2, 3]);
-        gen.step(0);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2]);
+        let mut g = Generator::new(Style::ItgSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(0);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3]);
+        g.step(0);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3]);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![1, 2, 3]);
+        g.step(0);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2]);
     }
     // max dist two feet
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_feet = Some(2.0);
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Right;
-        gen.step(3);
-        gen.step(0);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
-        gen.step(7);
-        assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Right;
+        g.step(3);
+        g.step(0);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3]);
+        g.step(7);
+        assert_eq!(g.valid_cols(), vec![4, 5, 6, 7]);
     }
     // max dist two feet if crossover
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_feet_if_crossover = Some(1.9);
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Right;
-        gen.step(4);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
-        gen.step(5);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7]);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Right;
+        g.step(4);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
+        g.step(5);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7]);
     }
     // max dist steps
     {
         let mut params = GeneratorParameters::default();
         params.max_dist_between_steps = Some(2.0);
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(0);
-        gen.step(7);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
-        gen.step(0);
-        assert_eq!(gen.valid_cols(), vec![4, 5, 6, 7]);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Left;
+        g.step(0);
+        g.step(7);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3]);
+        g.step(0);
+        assert_eq!(g.valid_cols(), vec![4, 5, 6, 7]);
     }
     // max horizontal dist between steps
     {
         let mut params = GeneratorParameters::default();
         params.max_horizontal_dist_between_steps = Some(1.0);
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(7);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(7);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5]);
     }
     // max horizontal dist between steps if crossover
     {
         let mut params = GeneratorParameters::default();
         params.max_horizontal_dist_between_steps_if_crossover = Some(1.5);
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(7);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
-        gen.step(4);
-        assert_eq!(gen.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(7);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        g.step(4);
+        assert_eq!(g.valid_cols(), vec![3, 4, 5, 6, 7, 8]);
     }
     // max vertical dist steps
     {
         let mut params = GeneratorParameters::default();
         params.max_vertical_dist_between_steps = Some(1.0);
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(3);
-        gen.step(7);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(3);
+        g.step(7);
+        assert_eq!(g.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
     }
     // max horizontal dist both foot 4 steps
     {
         let mut params = GeneratorParameters::default();
         params.max_horizontal_dist_between_4_steps_both_feet = Some(2.5);
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(0);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7]);
-        gen.step(1);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3]);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6]);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Left;
+        g.step(0);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6, 7]);
+        g.step(1);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3]);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6]);
     }
     // max angle
     {
         let mut params = GeneratorParameters::default();
         params.max_angle = Some(PI * 3.0 / 4.0);
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(1);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 5]);
-        gen.next_foot = Foot::Right;
-        gen.step(7);
-        gen.step(7);
-        assert_eq!(gen.valid_cols(), vec![3, 5, 6, 7, 8]);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(1);
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 5]);
+        g.next_foot = Foot::Right;
+        g.step(7);
+        g.step(7);
+        assert_eq!(g.valid_cols(), vec![3, 5, 6, 7, 8]);
     }
     // max turn
     {
         let mut params = GeneratorParameters::default();
         params.max_turn = Some(PI / 2.0);
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(3);
-        gen.step(4);
-        assert_eq!(gen.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(3);
+        g.step(4);
+        assert_eq!(g.valid_cols(), vec![0, 1, 3, 4, 7, 8]);
 
-        gen.step(5);
-        gen.step(4);
-        assert_eq!(gen.valid_cols(), vec![1, 2, 4, 5, 6, 7]);
+        g.step(5);
+        g.step(4);
+        assert_eq!(g.valid_cols(), vec![1, 2, 4, 5, 6, 7]);
     }
     // max bar angle
     {
         let mut params = GeneratorParameters::default();
         params.max_bar_angle = Some(0.3);
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Right;
-        gen.step(4);
-        gen.step(3);
-        assert_eq!(gen.valid_cols(), vec![2, 3, 4, 5, 6, 7]);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Right;
+        g.step(4);
+        g.step(3);
+        assert_eq!(g.valid_cols(), vec![2, 3, 4, 5, 6, 7]);
     }
     // foot other side
     {
         let mut params = GeneratorParameters::default();
         params.disallow_foot_opposite_side = true;
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Left;
-        assert_eq!(gen.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6]);
-        gen.next_foot = Foot::Right;
-        assert_eq!(gen.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Left;
+        assert_eq!(g.valid_cols(), vec![0, 1, 2, 3, 4, 5, 6]);
+        g.next_foot = Foot::Right;
+        assert_eq!(g.valid_cols(), vec![1, 2, 3, 4, 5, 6, 7]);
     }
 }
 
@@ -944,248 +941,248 @@ fn steps_prob() {
     {
         let mut params = GeneratorParameters::default();
         params.repeated_decay = Some((2, 0.5));
-        let mut gen = Generator::new(Style::ItgSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(0);
-        gen.step(3);
-        gen.step(0);
-        gen.step(3);
-        assert_eq!(gen.prob(0), 1.0);
-        gen.step(0);
-        assert_eq!(gen.prob(3), 1.0);
-        gen.step(3);
-        assert_eq!(gen.prob(0), 0.5);
-        gen.step(0);
-        assert_eq!(gen.prob(3), 0.5);
-        gen.step(3);
-        assert_eq!(gen.prob(0), 0.5);
-        gen.step(0);
-        assert_eq!(gen.prob(3), 0.5);
+        let mut g = Generator::new(Style::ItgSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(0);
+        g.step(3);
+        g.step(0);
+        g.step(3);
+        assert_eq!(g.prob(0), 1.0);
+        g.step(0);
+        assert_eq!(g.prob(3), 1.0);
+        g.step(3);
+        assert_eq!(g.prob(0), 0.5);
+        g.step(0);
+        assert_eq!(g.prob(3), 0.5);
+        g.step(3);
+        assert_eq!(g.prob(0), 0.5);
+        g.step(0);
+        assert_eq!(g.prob(3), 0.5);
     }
     // other foot repeated decay
     {
         let mut params = GeneratorParameters::default();
         params.other_foot_repeat_decay = Some(0.5);
-        let mut gen = Generator::new(Style::ItgSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(0);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        gen.step(3);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        gen.step(0);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 0.5);
-        gen.step(3);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        gen.step(0);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 0.5);
-        gen.step(2);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
+        let mut g = Generator::new(Style::ItgSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(0);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        g.step(3);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        g.step(0);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 0.5);
+        g.step(3);
+        assert_eq!(g.prob(0), 0.5);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        g.step(0);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 0.5);
+        g.step(2);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
     }
     // dist between feet decay
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_feet_decay = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Right;
-        gen.step(4);
-        gen.step(3);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(7), 0.25);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Right;
+        g.step(4);
+        g.step(3);
+        assert_eq!(g.prob(0), 0.5);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(7), 0.25);
     }
     // dist between steps decay
     {
         let mut params = GeneratorParameters::default();
         params.dist_between_steps_decay = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(3);
-        gen.step(5);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(7), 0.25);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Left;
+        g.step(3);
+        g.step(5);
+        assert_eq!(g.prob(0), 0.5);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(7), 0.25);
     }
     // horizontal dist between steps decay
     {
         let mut params = GeneratorParameters::default();
         params.horizontal_dist_between_steps_decay = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(7);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 0.5);
-        assert_eq!(gen.prob(7), 0.5);
-        assert_eq!(gen.prob(8), 0.5);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(7);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 0.5);
+        assert_eq!(g.prob(7), 0.5);
+        assert_eq!(g.prob(8), 0.5);
     }
     // vertical dist between steps decay
     {
         let mut params = GeneratorParameters::default();
         params.vertical_dist_between_steps_decay = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(3);
-        gen.step(7);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 0.5);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 0.5);
-        assert_eq!(gen.prob(6), 0.5);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(3);
+        g.step(7);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 0.5);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 0.5);
+        assert_eq!(g.prob(6), 0.5);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
     }
     // horizontal dist between 3 foot steps decay
     {
         let mut params = GeneratorParameters::default();
         params.horizontal_dist_between_3_steps_decay = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(2);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
-        gen.step(5);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 0.5);
-        assert_eq!(gen.prob(7), 0.5);
-        assert_eq!(gen.prob(8), 0.5);
-        gen.step(6);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
-        gen.step(5);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(1), 0.5);
-        assert_eq!(gen.prob(2), 0.5);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(2);
+        g.step(8);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
+        g.step(5);
+        g.step(8);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 0.5);
+        assert_eq!(g.prob(7), 0.5);
+        assert_eq!(g.prob(8), 0.5);
+        g.step(6);
+        g.step(8);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
+        g.step(5);
+        g.step(8);
+        assert_eq!(g.prob(0), 0.5);
+        assert_eq!(g.prob(1), 0.5);
+        assert_eq!(g.prob(2), 0.5);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
     }
     // horizontal dist same foot 3 steps
     {
         let mut params = GeneratorParameters::default();
         params.horizontal_dist_between_3_steps_same_foot_decay = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::HorizonSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(2);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
-        gen.step(5);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 0.5);
-        assert_eq!(gen.prob(7), 0.5);
-        assert_eq!(gen.prob(8), 0.5);
-        gen.step(6);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
-        gen.step(5);
-        gen.step(8);
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(1), 0.5);
-        assert_eq!(gen.prob(2), 0.5);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(8), 1.0);
+        let mut g = Generator::new(Style::HorizonSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(2);
+        g.step(8);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
+        g.step(5);
+        g.step(8);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 0.5);
+        assert_eq!(g.prob(7), 0.5);
+        assert_eq!(g.prob(8), 0.5);
+        g.step(6);
+        g.step(8);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
+        g.step(5);
+        g.step(8);
+        assert_eq!(g.prob(0), 0.5);
+        assert_eq!(g.prob(1), 0.5);
+        assert_eq!(g.prob(2), 0.5);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(8), 1.0);
     }
     // angle decay
     {
         {
             let mut params = GeneratorParameters::default();
             params.angle_decay = Some((PI / 2.0, 0.5));
-            let mut gen = Generator::new(Style::HorizonSingles, params);
-            gen.next_foot = Foot::Left;
-            gen.step(1);
-            gen.step(1);
+            let mut g = Generator::new(Style::HorizonSingles, params);
+            g.next_foot = Foot::Left;
+            g.step(1);
+            g.step(1);
         }
         {
             let mut params = GeneratorParameters::default();
             params.angle_decay = Some((PI / 2.0, 0.5));
-            let mut gen = Generator::new(Style::HorizonSingles, params);
-            gen.next_foot = Foot::Right;
-            gen.step(7);
-            gen.step(7);
-            assert_relative_eq!(gen.prob(6), 1.0);
-            assert_relative_eq!(gen.prob(7), 1.0);
-            assert_relative_eq!(gen.prob(8), 1.0);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.0));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
-            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.0));
+            let mut g = Generator::new(Style::HorizonSingles, params);
+            g.next_foot = Foot::Right;
+            g.step(7);
+            g.step(7);
+            assert_relative_eq!(g.prob(6), 1.0);
+            assert_relative_eq!(g.prob(7), 1.0);
+            assert_relative_eq!(g.prob(8), 1.0);
+            assert_relative_eq!(g.prob(3), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(g.prob(5), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(g.prob(1), 0.5_f32.powf(PI / 2.0));
         }
     }
     // turn decay
@@ -1193,108 +1190,108 @@ fn steps_prob() {
         {
             let mut params = GeneratorParameters::default();
             params.turn_decay = Some((PI / 2.0, 0.5));
-            let mut gen = Generator::new(Style::HorizonSingles, params);
-            gen.next_foot = Foot::Left;
-            gen.step(1);
-            gen.step(1);
-            assert_relative_eq!(gen.prob(0), 1.0);
-            assert_relative_eq!(gen.prob(1), 1.0);
-            assert_relative_eq!(gen.prob(2), 1.0);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.0));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
-            assert_relative_eq!(gen.prob(7), 0.5_f32.powf(PI / 2.0));
+            let mut g = Generator::new(Style::HorizonSingles, params);
+            g.next_foot = Foot::Left;
+            g.step(1);
+            g.step(1);
+            assert_relative_eq!(g.prob(0), 1.0);
+            assert_relative_eq!(g.prob(1), 1.0);
+            assert_relative_eq!(g.prob(2), 1.0);
+            assert_relative_eq!(g.prob(3), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(g.prob(5), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(g.prob(7), 0.5_f32.powf(PI / 2.0));
         }
         {
             let mut params = GeneratorParameters::default();
             params.turn_decay = Some((PI / 2.0, 0.5));
-            let mut gen = Generator::new(Style::HorizonSingles, params);
-            gen.next_foot = Foot::Right;
-            gen.step(7);
-            gen.step(7);
-            assert_relative_eq!(gen.prob(6), 1.0);
-            assert_relative_eq!(gen.prob(7), 1.0);
-            assert_relative_eq!(gen.prob(8), 1.0);
-            assert_relative_eq!(gen.prob(3), 0.5_f32.powf(PI / 4.0));
-            assert_relative_eq!(gen.prob(5), 0.5_f32.powf(PI / 4.0));
-            assert_relative_eq!(gen.prob(1), 0.5_f32.powf(PI / 2.0));
+            let mut g = Generator::new(Style::HorizonSingles, params);
+            g.next_foot = Foot::Right;
+            g.step(7);
+            g.step(7);
+            assert_relative_eq!(g.prob(6), 1.0);
+            assert_relative_eq!(g.prob(7), 1.0);
+            assert_relative_eq!(g.prob(8), 1.0);
+            assert_relative_eq!(g.prob(3), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(g.prob(5), 0.5_f32.powf(PI / 4.0));
+            assert_relative_eq!(g.prob(1), 0.5_f32.powf(PI / 2.0));
         }
     }
     // crossover multiplier
     {
         let mut params = GeneratorParameters::default();
         params.crossover_multiplier = Some(2.0);
-        let mut gen = Generator::new(Style::ItgSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(1);
-        assert_relative_eq!(gen.prob(0), 1.0);
-        assert_relative_eq!(gen.prob(1), 1.0);
-        assert_relative_eq!(gen.prob(2), 1.0);
-        assert_relative_eq!(gen.prob(3), 2.0);
+        let mut g = Generator::new(Style::ItgSingles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(1);
+        assert_relative_eq!(g.prob(0), 1.0);
+        assert_relative_eq!(g.prob(1), 1.0);
+        assert_relative_eq!(g.prob(2), 1.0);
+        assert_relative_eq!(g.prob(3), 2.0);
     }
     // bar angle decay
     {
         let mut params = GeneratorParameters::default();
         params.bar_angle_decay = Some((0.3, 0.5));
-        let mut gen = Generator::new(Style::ItgDoubles, params);
-        gen.next_foot = Foot::Right;
-        gen.step(4);
-        gen.step(3);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert!(gen.prob(1) < 1.0);
+        let mut g = Generator::new(Style::ItgDoubles, params);
+        g.next_foot = Foot::Right;
+        g.step(4);
+        g.step(3);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert!(g.prob(1) < 1.0);
     }
     // preserve input repetitions different decay
     {
         let mut params = GeneratorParameters::default();
         params.preserve_input_repetitions = Some(0.5);
-        let mut gen = Generator::new(Style::ItgSingles, params);
-        gen.next_foot = Foot::Left;
-        gen.step_with_input_col(0, 4);
-        gen.step_with_input_col(3, 8);
-        assert_eq!(gen.prob_with_input_col(0, 4), 1.0);
-        assert_eq!(gen.prob_with_input_col(0, 5), 0.5);
-        assert_eq!(gen.prob_with_input_col(1, 4), 1.0);
-        assert_eq!(gen.prob_with_input_col(1, 5), 1.0);
+        let mut g = Generator::new(Style::ItgSingles, params);
+        g.next_foot = Foot::Left;
+        g.step_with_input_col(0, 4);
+        g.step_with_input_col(3, 8);
+        assert_eq!(g.prob_with_input_col(0, 4), 1.0);
+        assert_eq!(g.prob_with_input_col(0, 5), 0.5);
+        assert_eq!(g.prob_with_input_col(1, 4), 1.0);
+        assert_eq!(g.prob_with_input_col(1, 5), 1.0);
     }
     // doubles movement distance decay
     {
         let mut params = GeneratorParameters::default();
         params.doubles_movement = Some((1.0, 0.5));
-        let mut gen = Generator::new(Style::HorizonDoubles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(7);
-        gen.zone = Zone {
+        let mut g = Generator::new(Style::HorizonDoubles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(7);
+        g.zone = Zone {
             start_x: 0.0,
             end_x: 5.0,
             steps_until_end: 5,
             total_move_steps: 5,
         };
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(2), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(7), 0.5);
-        assert_eq!(gen.prob(10), 0.25);
-        gen.step(1);
-        assert_eq!(gen.prob(1), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(4), 1.0);
-        assert_eq!(gen.prob(5), 1.0);
-        assert_eq!(gen.prob(7), 1.0);
-        assert_eq!(gen.prob(10), 0.5);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(2), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(7), 0.5);
+        assert_eq!(g.prob(10), 0.25);
+        g.step(1);
+        assert_eq!(g.prob(1), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(4), 1.0);
+        assert_eq!(g.prob(5), 1.0);
+        assert_eq!(g.prob(7), 1.0);
+        assert_eq!(g.prob(10), 0.5);
     }
     // doubles movement distance decay
     {
         let mut params = GeneratorParameters::default();
         params.doubles_movement = Some((1.0, 0.5));
         params.doubles_track_individual_feet = true;
-        let mut gen = Generator::new(Style::HorizonDoubles, params);
-        gen.next_foot = Foot::Left;
-        gen.step(1);
-        gen.step(7);
-        gen.zone = Zone {
+        let mut g = Generator::new(Style::HorizonDoubles, params);
+        g.next_foot = Foot::Left;
+        g.step(1);
+        g.step(7);
+        g.zone = Zone {
             start_x: 0.5,
             end_x: 5.5,
             steps_until_end: 5,
@@ -1302,18 +1299,18 @@ fn steps_prob() {
         };
         // zone.current_x is 0.5
         // zone left foot x is 0.0
-        assert_eq!(gen.prob(0), 1.0);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(6), 0.5);
-        assert_eq!(gen.prob(9), 0.25);
-        gen.step(1);
+        assert_eq!(g.prob(0), 1.0);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(6), 0.5);
+        assert_eq!(g.prob(9), 0.25);
+        g.step(1);
         // zone.current_x is 1.5
         // zone right foot x is 2.0
-        assert_eq!(gen.prob(0), 0.5);
-        assert_eq!(gen.prob(3), 1.0);
-        assert_eq!(gen.prob(6), 1.0);
-        assert_eq!(gen.prob(9), 1.0);
-        assert_eq!(gen.prob(12), 0.5);
+        assert_eq!(g.prob(0), 0.5);
+        assert_eq!(g.prob(3), 1.0);
+        assert_eq!(g.prob(6), 1.0);
+        assert_eq!(g.prob(9), 1.0);
+        assert_eq!(g.prob(12), 0.5);
     }
 }
 
@@ -1321,21 +1318,21 @@ fn steps_prob() {
 fn test_prev_angle() {
     use approx::assert_relative_eq;
     use std::f32::consts::PI;
-    let mut gen = Generator::new(Style::ItgSingles, GeneratorParameters::default());
-    gen.next_foot = Foot::Left;
-    gen.step(0);
-    gen.step(3);
-    assert_relative_eq!(gen.prev_angle, 0.0);
-    gen.step(2);
-    assert_relative_eq!(gen.prev_angle, -PI / 4.0);
-    gen.step(1);
-    assert_relative_eq!(gen.prev_angle, -PI / 2.0);
-    gen.step(0);
-    assert_relative_eq!(gen.prev_angle, -PI / 4.0);
-    gen.step(2);
-    assert_relative_eq!(gen.prev_angle, PI / 4.0);
-    gen.step(3);
-    assert_relative_eq!(gen.prev_angle, 3.0 / 4.0 * PI);
-    gen.step(0);
-    assert_relative_eq!(gen.prev_angle, PI);
+    let mut g = Generator::new(Style::ItgSingles, GeneratorParameters::default());
+    g.next_foot = Foot::Left;
+    g.step(0);
+    g.step(3);
+    assert_relative_eq!(g.prev_angle, 0.0);
+    g.step(2);
+    assert_relative_eq!(g.prev_angle, -PI / 4.0);
+    g.step(1);
+    assert_relative_eq!(g.prev_angle, -PI / 2.0);
+    g.step(0);
+    assert_relative_eq!(g.prev_angle, -PI / 4.0);
+    g.step(2);
+    assert_relative_eq!(g.prev_angle, PI / 4.0);
+    g.step(3);
+    assert_relative_eq!(g.prev_angle, 3.0 / 4.0 * PI);
+    g.step(0);
+    assert_relative_eq!(g.prev_angle, PI);
 }

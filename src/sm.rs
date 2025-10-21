@@ -186,13 +186,13 @@ fn generate_notes(
     if params.seed.is_none() {
         params.seed = Some(chart_hash(chart));
     }
-    let mut gen = Generator::new(to_style, params);
+    let mut g = Generator::new(to_style, params);
     for l in &chart.notes_lines {
         if let Some(cols) = columns(l, params.remove_jumps) {
             let is_jump = cols.len() > 1;
             let mut out_cols = Vec::new();
             for col in cols {
-                let idx = gen.gen_with_input_col(col, is_jump);
+                let idx = g.generate_with_input_col(col, is_jump);
                 out_cols.push(idx);
             }
             ret.push_str(&row_notes(&out_cols, to_style));
