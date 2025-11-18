@@ -109,7 +109,6 @@ fn create_params(
     vroom: bool,
     preserve_input_repetitions: bool,
     disallow_footswitch: bool,
-    to_style: Style,
     min_difficulty: Option<i32>,
     max_difficulty: Option<i32>,
 ) -> GeneratorParameters {
@@ -128,11 +127,7 @@ fn create_params(
         } else {
             Some(0.3)
         },
-        max_dist_between_feet: Some(if to_style == Style::PumpDoublesBrackets {
-            3.9
-        } else {
-            2.9
-        }),
+        max_dist_between_feet: Some(2.9),
         max_dist_between_feet_if_crossover: Some(2.5),
         dist_between_feet_decay: None,
         max_dist_between_steps: Some(if has_crossovers || vroom { 2.9 } else { 2.1 }),
@@ -218,7 +213,6 @@ fn main() -> std::io::Result<()> {
                 opts.vroom,
                 opts.preserve_input_repetitions,
                 !opts.footswitches,
-                *to_style,
                 opts.min_difficulty,
                 opts.max_difficulty,
             );
@@ -288,15 +282,11 @@ fn test_params() {
         for crossovers in 0..=2 {
             for preserve in [false, true] {
                 check_params(create_params(
-                    None, crossovers, false, false, preserve, true, to_style, None, None,
+                    None, crossovers, false, false, preserve, true, None, None,
                 ));
             }
         }
-        check_params(create_params(
-            None, 1, true, false, false, true, to_style, None, None,
-        ));
-        check_params(create_params(
-            None, 0, false, true, false, true, to_style, None, None,
-        ));
+        check_params(create_params(None, 1, true, false, false, true, None, None));
+        check_params(create_params(None, 0, false, true, false, true, None, None));
     }
 }
