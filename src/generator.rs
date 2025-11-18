@@ -307,7 +307,7 @@ impl Generator {
         };
 
         let dist = (x_dest - prev_x).abs();
-        let steps_per_dist = override_steps_per_dist.unwrap_or(12.0);
+        let steps_per_dist = override_steps_per_dist.unwrap_or(14.0);
         let move_steps = (dist * steps_per_dist).ceil() as i32;
         Zone {
             start_x: prev_x,
